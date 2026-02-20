@@ -8,38 +8,40 @@ const DEFAULT_WS =
 
 const ROUTE_OPTIONS = [
   { value: 'auto', label: 'Auto' },
-  { value: 'chat', label: 'Chat only' },
-  { value: 'codex', label: 'Codex only' }
+  { value: 'chat', label: 'Chat' },
+  { value: 'codex', label: 'Codex' }
 ]
 
 const QUICK_PROMPTS = [
-  {
-    label: 'Status pulse',
-    text: 'Give me a crisp status update on everything running right now.'
-  },
-  {
-    label: 'Code diff',
-    text: 'Draft the git diff summary for the latest frontend changes.'
-  },
-  {
-    label: 'Persona tune',
-    text: 'Refresh the persona blurb with three bullet improvements.'
-  }
+  { label: 'Pulse', text: 'Give me a crisp status report across all active systems.' },
+  { label: 'Ship list', text: 'List what is production-ready and what needs polish.' },
+  { label: 'Diff brief', text: 'Summarize the code changes since the last deploy.' }
 ]
 
 const STACK_SIGNALS = [
-  { label: 'Frontend', value: '5180 / mobile-ready', tone: 'good', detail: 'Vite live on LAN' },
-  { label: 'Backend', value: '8002 / uvicorn', tone: 'good', detail: 'Ready for websocket traffic' },
-  { label: 'Codex router', value: 'idle', tone: 'warn', detail: 'Awaiting first route' },
-  { label: 'LogKeeper', value: 'disabled', tone: 'idle', detail: 'Stream target TBD' }
+  { label: 'Frontend', value: '5180 • online', tone: 'good', detail: 'Vite dev server' },
+  { label: 'Backend', value: '8000 • listening', tone: 'good', detail: 'FastAPI + WS bridge' },
+  { label: 'Codex router', value: 'idle', tone: 'warn', detail: 'Waiting for directives' },
+  { label: 'LogKeeper', value: 'disconnected', tone: 'idle', detail: 'Hook stream to enable' }
 ]
 
-const PersonaCard = () => (
+const DEFAULT_DIRECTIVES = [
+  'Ship the cyberpunk shell before sunrise',
+  'Keep Codex reserved for heavy diffs',
+  'LogKeeper widget must surface errors instantly'
+]
+
+const PersonaCard = ({ profile }) => (
   <div className="persona-card">
     <div className="persona-avatar">N</div>
     <div className="persona-details">
       <h3>Nara</h3>
-      <span>Autonomous build assistant</span>
+      <span>{profile.tagline}</span>
+      <div className="persona-tags">
+        {profile.traits.map(trait => (
+          <span key={trait}>{trait}</span>
+        ))}
+      </div>
     </div>
   </div>
 )
@@ -90,11 +92,73 @@ const ActivityItem = ({ entry }) => (
   </div>
 )
 
+const DirectiveList = ({ directives }) => (
+  <div className="list-card">
+    <h4>Pinned directives</h4>
+    <ul>
+      {directives.map(item => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  </div>
+)
+
+const PersonaTuner = ({ personaState, onAdjust }) => (
+  <div className="list-card persona-tuner">
+    <h4>Persona tuning</h4>
+    <div className="tuner-grid">
+      {personaState.map(control => (
+        <label key={control.key}>
+          <span>{control.label}</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={control.value}
+            onChange={event => onAdjust(control.key, Number(event.target.value))}
+          />
+          <small>{control.caption}</small>
+        </label>
+      ))}
+    </div>
+  </div>
+)
+
+const CommandQueue = ({ queue, onComplete }) => (
+  <div className="list-card">
+    <h4>Command queue</h4>
+    <ul className="command-queue">
+      {queue.length === 0 && <li className="ghost">No staged commands — draft one below.</li>}
+      {queue.map(entry => (
+        <li key={entry.id}>
+          <div>
+            <p>{entry.text}</p>
+            <span>{entry.route.toUpperCase()} • {entry.status}</span>
+          </div>
+          <button onClick={() => onComplete(entry.id)}>complete</button>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
+
 export default function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [routePref, setRoutePref] = useState('auto')
   const [status, setStatus] = useState('connecting')
+  const [queue, setQueue] = useState([])
+  const [newCommand, setNewCommand] = useState('')
+  const [personaProfile, setPersonaProfile] = useState({
+    tagline: 'Autonomous build siren',
+    traits: ['seductive', 'cunning', 'financially wired']
+  })
+  const [personaControls, setPersonaControls] = useState([
+    { key: 'seduction', label: 'Seduction', caption: 'Charm vs reserve', value: 78 },
+    { key: 'cunning', label: 'Cunning', caption: 'Instinct vs planning', value: 82 },
+    { key: 'ruthless', label: 'Ruthless', caption: 'Polish vs velocity', value: 64 }
+  ])
+
   const wsRef = useRef(null)
   const reconnectRef = useRef()
   const scrollRef = useRef()
@@ -102,9 +166,7 @@ export default function App() {
 
   const connect = useCallback(() => {
     try {
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      if (wsRef.current) wsRef.current.close()
       setStatus('connecting')
       const socket = new WebSocket(DEFAULT_WS)
       wsRef.current = socket
@@ -184,20 +246,11 @@ export default function App() {
     textareaRef.current?.focus()
   }
 
-  const personaFacts = useMemo(
-    () => [
-      'Frontend priority: chat + logkeeper shell',
-      'WebSocket handshake + Codex routing',
-      'Push clean diffs to GitHub'
-    ],
-    []
-  )
-
   const activityStream = useMemo(() => {
     if (!messages.length) {
       return [
-        { title: 'Awaiting first command', meta: 'No user traffic yet', time: '—' },
-        { title: 'Vite dev server up', meta: 'http://10.0.0.53:5180', time: 'live' }
+        { title: 'Awaiting directives', meta: 'No traffic yet', time: '—' },
+        { title: 'Stack warm', meta: 'Frontend + backend live', time: 'now' }
       ]
     }
     return messages
@@ -205,12 +258,31 @@ export default function App() {
       .reverse()
       .map(msg => ({
         title: msg.role === 'user' ? 'User prompt' : 'Assistant response',
-        meta: msg.content?.slice(0, 72) || 'payload',
+        meta: msg.content?.slice(0, 80) || 'payload',
         time: msg.ts ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'
       }))
   }, [messages])
 
+  const emptyConversation = messages.length === 0
   const disabled = !input.trim() || status === 'error' || status === 'offline'
+
+  const handleCommandAdd = event => {
+    event.preventDefault()
+    if (!newCommand.trim()) return
+    setQueue(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), text: newCommand.trim(), route: routePref, status: 'staged' }
+    ])
+    setNewCommand('')
+  }
+
+  const handleCommandComplete = id => {
+    setQueue(prev => prev.filter(entry => entry.id !== id))
+  }
+
+  const handlePersonaAdjust = (key, value) => {
+    setPersonaControls(prev => prev.map(control => (control.key === key ? { ...control, value } : control)))
+  }
 
   return (
     <div className="app-shell">
@@ -218,8 +290,8 @@ export default function App() {
         <div className="brand">
           <span className="brand-mark" />
           <div>
-            <p>Nara Hub</p>
-            <small>Direct ops console</small>
+            <small>Nara Hub</small>
+            <strong>Direct ops console</strong>
           </div>
         </div>
         <div className="nav-actions">
@@ -248,15 +320,14 @@ export default function App() {
           <div className="panel-header">
             <div>
               <h2>Conversation</h2>
-              <p>Send directives or drop into Codex mode on demand.</p>
+              <p>Nudge Codex or keep it chatty — your call.</p>
             </div>
           </div>
-
           <div className="messages-scroll" ref={scrollRef}>
-            {messages.length === 0 && (
+            {emptyConversation && (
               <div className="message system">
                 <div className="message-content">
-                  Waiting for the backend… type a message or pick a quick prompt to wake the stack.
+                  Wired in. Drop a directive or tap a quick prompt to wake the stack.
                 </div>
               </div>
             )}
@@ -269,7 +340,7 @@ export default function App() {
           <div className="composer">
             <textarea
               ref={textareaRef}
-              placeholder="Type to command Codex, shift+enter for newline"
+              placeholder="Type to command Codex. Shift+Enter for newline."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -291,20 +362,26 @@ export default function App() {
 
         <aside className="panel stack-panel">
           <div className="panel-header">
-            <h2>Stack monitor</h2>
-            <p>Live directives & activity feed</p>
+            <h2>Control tower</h2>
+            <p>Live directives, queue, and persona tuning.</p>
           </div>
+          <PersonaCard profile={personaProfile} />
+          <DirectiveList directives={DEFAULT_DIRECTIVES} />
+          <PersonaTuner personaState={personaControls} onAdjust={handlePersonaAdjust} />
+          <CommandQueue queue={queue} onComplete={handleCommandComplete} />
 
-          <PersonaCard />
-
-          <div className="list-card">
-            <h4>Live directives</h4>
-            <ul>
-              {personaFacts.map(fact => (
-                <li key={fact}>{fact}</li>
-              ))}
-            </ul>
-          </div>
+          <form className="list-card command-form" onSubmit={handleCommandAdd}>
+            <h4>Draft a command</h4>
+            <div className="command-form-grid">
+              <input
+                type="text"
+                placeholder="e.g. Run Codex diff for frontend"
+                value={newCommand}
+                onChange={e => setNewCommand(e.target.value)}
+              />
+              <button type="submit">Stage</button>
+            </div>
+          </form>
 
           <div className="list-card">
             <h4>Recent activity</h4>
@@ -313,15 +390,6 @@ export default function App() {
                 <ActivityItem key={`${entry.title}-${entry.time}`} entry={entry} />
               ))}
             </div>
-          </div>
-
-          <div className="list-card">
-            <h4>Deployment checklist</h4>
-            <ul>
-              <li>Wire Codex router to backend WS</li>
-              <li>Mount LogKeeper widget + stream</li>
-              <li>Ship Vercel preview once UI passes review</li>
-            </ul>
           </div>
         </aside>
       </div>
