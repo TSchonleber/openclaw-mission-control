@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import heroConsole from './assets/hero-console.jpg'
+import heroHall from './assets/hero-hall.jpg'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -266,6 +268,8 @@ export default function App() {
   const emptyConversation = messages.length === 0
   const disabled = !input.trim() || status === 'error' || status === 'offline'
 
+  const heroCTA = () => handlePrompt(QUICK_PROMPTS[0].text)
+
   const handleCommandAdd = event => {
     event.preventDefault()
     if (!newCommand.trim()) return
@@ -325,9 +329,12 @@ export default function App() {
           </div>
           <div className="messages-scroll" ref={scrollRef}>
             {emptyConversation && (
-              <div className="message system">
-                <div className="message-content">
-                  Wired in. Drop a directive or tap a quick prompt to wake the stack.
+              <div className="conversation-hero" style={{ backgroundImage: `url(${heroConsole})` }}>
+                <div className="hero-panel">
+                  <p className="eyebrow">Command deck idle</p>
+                  <h3>Drop a directive to wake the stack.</h3>
+                  <p>Codex routes are standing by. Use a quick prompt or type freely.</p>
+                  <button onClick={heroCTA}>Run quick pulse</button>
                 </div>
               </div>
             )}
@@ -366,6 +373,12 @@ export default function App() {
             <p>Live directives, queue, and persona tuning.</p>
           </div>
           <PersonaCard profile={personaProfile} />
+          <div className="stack-hero" style={{ backgroundImage: `url(${heroHall})` }}>
+            <div>
+              <p className="eyebrow">Ops corridor</p>
+              <strong>All systems awaiting directives</strong>
+            </div>
+          </div>
           <DirectiveList directives={DEFAULT_DIRECTIVES} />
           <PersonaTuner personaState={personaControls} onAdjust={handlePersonaAdjust} />
           <CommandQueue queue={queue} onComplete={handleCommandComplete} />

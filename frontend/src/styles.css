@@ -59,6 +59,22 @@ body::after {
   filter: blur(140px);
 }
 
+h1, h2, h3, h4, h5 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
 #root,
 .app-shell {
   min-height: 100vh;
@@ -587,4 +603,63 @@ textarea:focus {
   color: #04060b;
   font-weight: 600;
   cursor: pointer;
+}
+
+.conversation-hero {
+  min-height: 280px;
+  border-radius: var(--radius-tight);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 60px rgba(5, 7, 13, 0.8);
+}
+
+.conversation-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(5, 6, 14, 0.85), rgba(8, 12, 26, 0.3));
+}
+
+.conversation-hero .hero-panel {
+  position: relative;
+  z-index: 1;
+  padding: 32px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation-hero h3 {
+  font-size: 1.6rem;
+}
+
+.conversation-hero button {
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.stack-hero {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 160px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px;
+  box-shadow: inset 0 0 60px rgba(5, 7, 13, 0.8);
+}
+
+.stack-hero strong {
+  display: block;
+  font-size: 1rem;
 }
