@@ -5,8 +5,18 @@ import heroHall from './assets/hero-hall.jpg'
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
 const fallbackPort = protocol === 'wss' ? 443 : 8000
-const DEFAULT_WS =
-  import.meta.env.VITE_WS_URL || `${protocol}://${host}:${import.meta.env.VITE_WS_PORT || fallbackPort}/ws`
+const DEFAULT_WS = getWsUrl()
+
+const getWsUrl = () => {
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
+  const port = import.meta.env.VITE_WS_PORT || (window.location.protocol === 'https:' ? 443 : 8000)
+  const url = new URL(window.location.origin)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  url.port = import.meta.env.VITE_WS_PORT || url.port || port
+  url.pathname = '/ws'
+  return url.toString()
+}
+
 
 const ROUTE_OPTIONS = [
   { value: 'auto', label: 'Auto' },
@@ -32,6 +42,33 @@ const DEFAULT_DIRECTIVES = [
   'Keep Codex reserved for heavy diffs',
   'LogKeeper widget must surface errors instantly'
 ]
+
+const HeroHeader = () => (
+  <div className="hero-header" style={{ backgroundImage: `url(${heroConsole})` }}>
+    <div className="hero-content">
+      <span className="eyebrow">command deck</span>
+      <h1>Nara Hub</h1>
+      <p>Route directives through Codex or chat mode. Connection status lives up top.</p>
+      <div className="hero-actions">
+        <button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Open Composer</button>
+      </div>
+    </div>
+  </div>
+)
+
+const HealthBadge = ({ status, lastSeen }) => {
+  const labelMap = {
+    online: 'Online',
+    reconnecting: 'Reconnecting…',
+    connecting: 'Connecting…',
+    offline: 'Offline'
+  }
+  return (
+    <span className={`connection-pill ${status}`} title={lastSeen ? `Last handshake: ${lastSeen}` : ''}>
+      {labelMap[status] || 'Status'}
+    </span>
+  )
+}
 
 const PersonaCard = ({ profile }) => (
   <div className="persona-card">
@@ -150,6 +187,8 @@ export default function App() {
   const [routePref, setRoutePref] = useState('auto')
   const [status, setStatus] = useState('connecting')
   const [queue, setQueue] = useState([])
+  const [healthStatus, setHealthStatus] = useState('connecting')
+  const [lastSeen, setLastSeen] = useState(null)
   const [newCommand, setNewCommand] = useState('')
   const [personaProfile, setPersonaProfile] = useState({
     tagline: 'Autonomous build siren',
@@ -284,12 +323,18 @@ export default function App() {
     setQueue(prev => prev.filter(entry => entry.id !== id))
   }
 
+  const keepAlive = useCallback(() => {
+    fetch(import.meta.env.VITE_HEALTH_URL || '/health')
+      .then(() => setLastSeen(new Date().toLocaleTimeString()))
+      .catch(() => {})
+  }, [])
   const handlePersonaAdjust = (key, value) => {
     setPersonaControls(prev => prev.map(control => (control.key === key ? { ...control, value } : control)))
   }
 
   return (
     <div className="app-shell">
+      <HeroHeader />
       <header className="nav">
         <div className="brand">
           <span className="brand-mark" />
@@ -309,7 +354,7 @@ export default function App() {
               ))}
             </select>
           </label>
-          <ConnectionPill status={status} />
+          <div className="status-cluster"><HealthBadge status={status} lastSeen={lastSeen} /><button className="ping-button" onClick={keepAlive}>Ping</button></div>
         </div>
       </header>
 

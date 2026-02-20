@@ -663,3 +663,54 @@ textarea:focus {
   display: block;
   font-size: 1rem;
 }
+
+.hero-header {
+  width: 100%;
+  min-height: 260px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background-size: cover;
+  background-position: center;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-header::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg, rgba(5,6,14,0.9), rgba(8,12,26,0.3));
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 32px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.hero-content h1 {
+  font-size:2.4rem;
+  margin:0;
+}
+.hero-actions button {
+  border:none;
+  border-radius:999px;
+  padding:10px 22px;
+  background:rgba(255,255,255,0.2);
+  color:var(--text);
+  cursor:pointer;
+}
+.status-cluster {
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.ping-button {
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:999px;
+  padding:6px 16px;
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
