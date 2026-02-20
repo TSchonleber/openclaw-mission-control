@@ -5,8 +5,6 @@ import heroHall from './assets/hero-hall.jpg'
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
 const fallbackPort = protocol === 'wss' ? 443 : 8000
-const DEFAULT_WS = getWsUrl()
-
 const getWsUrl = () => {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
   const port = import.meta.env.VITE_WS_PORT || (window.location.protocol === 'https:' ? 443 : 8000)
@@ -16,6 +14,8 @@ const getWsUrl = () => {
   url.pathname = '/ws'
   return url.toString()
 }
+
+const DEFAULT_WS = getWsUrl()
 
 
 const ROUTE_OPTIONS = [
