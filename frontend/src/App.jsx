@@ -46,7 +46,7 @@ const LATENCY_BASELINE_MS = 320
 const TRAFFIC_WINDOW_MINUTES = 30
 const MS_IN_MINUTE = 60 * 1000
 
-const OWNER_SEQUENCE = ['Iris', 'Terrence', 'Aster', 'Osiris']
+const OWNER_SEQUENCE = ['Iris', 'Terrence', 'Nara', 'Aster', 'Osiris']
 const STATUS_SEQUENCE = ['backlog', 'in-progress', 'review', 'done']
 const TASKS_STORAGE_KEY = 'mission-control/tasks'
 
@@ -66,6 +66,22 @@ const INITIAL_TASKS = [
     status: 'in-progress',
     description: 'Ensure Ops Feed, Memory Stream, and Calendar render clean placeholder data.',
     updatedAt: '28m ago'
+  },
+  {
+    id: 'task-nara-playbooks',
+    title: 'Storyboard TaskBoard states',
+    owner: 'Nara',
+    status: 'in-progress',
+    description: 'Map hover/focus states + microcopy so Mission Control stays seductive.',
+    updatedAt: '18m ago'
+  },
+  {
+    id: 'task-nara-hand-off',
+    title: 'Prep Figma hand-off kit',
+    owner: 'Nara',
+    status: 'backlog',
+    description: 'Bundle component specs + tokens for future dashboard slices.',
+    updatedAt: 'Queued'
   },
   {
     id: 'task-iris-contracts',
