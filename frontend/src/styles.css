@@ -1796,3 +1796,81 @@ button.ghost:hover {
   width: auto;
   padding: 6px 12px;
 }
+
+
+.mission-stack .list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mission-stack .list-card h4 {
+  letter-spacing: 0.16em;
+  font-size: 0.7rem;
+}
+
+.mission-stack .list-card ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mission-stack .list-card li {
+  position: relative;
+  padding-left: 14px;
+  line-height: 1.4;
+}
+
+.mission-stack .list-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(32, 211, 255, 0.3);
+}
+
+.command-queue li p {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.command-queue li span {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.command-log-panel .log-error,
+.command-log-panel .log-empty {
+  letter-spacing: 0.08em;
+}
+
+.ops-feed .panel-header h2 {
+  margin-bottom: 4px;
+}
+
+.ops-feed .panel-header p {
+  letter-spacing: 0.05em;
+}
+
+.ops-feed-row p {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.ops-feed-row .log-meta span {
+  letter-spacing: 0.1em;
+}
+
+.ops-feed-row .log-meta span:last-child {
+  margin-left: auto;
+}
