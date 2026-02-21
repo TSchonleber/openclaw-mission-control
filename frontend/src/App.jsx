@@ -18,12 +18,15 @@ const getWsUrl = () => {
 
 const DEFAULT_WS = getWsUrl()
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const buildSessionId = route => (route && route !== 'auto' ? `agent:${route}:main` : undefined)
 const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
   { value: 'auto', label: 'Auto' },
-  { value: 'chat', label: 'Chat' },
-  { value: 'codex', label: 'Codex' }
+  { value: 'aster', label: 'Aster' },
+  { value: 'nara', label: 'Nara' },
+  { value: 'iris', label: 'Iris' },
+  { value: 'osiris', label: 'Osiris' }
 ]
 
 const QUICK_PROMPTS = [
@@ -271,6 +274,8 @@ export default function App() {
   const [commandLogError, setCommandLogError] = useState(null)
   const [commandFilter, setCommandFilter] = useState('all')
   const [commandSearch, setCommandSearch] = useState('')
+  const [composerError, setComposerError] = useState(null)
+  const [isSending, setIsSending] = useState(false)
 
   const wsRef = useRef(null)
   const reconnectRef = useRef()
@@ -393,18 +398,44 @@ export default function App() {
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages])
 
-  const sendMessage = useCallback(() => {
-    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
-    const payload = {
+  const sendMessage = useCallback(async () => {
+    if (!input.trim()) return
+    const optimistic = {
       id: crypto.randomUUID(),
       role: 'user',
       content: input.trim(),
       ts: new Date().toISOString(),
+      route: routePref,
       routeOverride: routePref
     }
-    wsRef.current.send(JSON.stringify(payload))
-    setMessages(prev => [...prev, payload])
+    setMessages(prev => [...prev, optimistic])
     setInput('')
+    setComposerError(null)
+    setIsSending(true)
+
+    const agentRoute = routePref || 'auto'
+    const sessionId = buildSessionId(agentRoute)
+    const body = {
+      message: optimistic.content,
+      ...(sessionId ? { sessionId } : {})
+    }
+
+    const endpoint = `${API_BASE || ''}/routes/${agentRoute}/messages`
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || `Gateway error (${response.status})`)
+      }
+    } catch (error) {
+      setComposerError(error.message || 'Failed to dispatch command')
+    } finally {
+      setIsSending(false)
+    }
   }, [input, routePref])
 
   const handleKeyDown = event => {
@@ -693,6 +724,9 @@ export default function App() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
             />
+            <div className="composer-route-hint">
+              <span>Routing to: {ROUTE_OPTIONS.find(option => option.value === routePref)?.label ?? 'Auto'}</span>
+            </div>
             <div className="composer-footer">
               <div className="quick-actions">
                 {QUICK_PROMPTS.map(prompt => (
@@ -701,10 +735,11 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <button className="send-button" disabled={disabled} onClick={sendMessage}>
-                Dispatch
+              <button className="send-button" disabled={disabled || isSending} onClick={sendMessage}>
+                {isSending ? 'Dispatching…' : 'Dispatch'}
               </button>
             </div>
+            {composerError && <p className="error-text">{composerError}</p>}
           </div>
         </main>
 
