@@ -11,14 +11,17 @@ import asyncio
 import json
 import logging
 import uuid
+from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocketState
 
 from codex_router import CodexRouter
+from command_log import CommandLog, CommandEntry
+from telemetry import TelemetryTracker
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,7 +34,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-router = CodexRouter()
+telemetry_tracker = TelemetryTracker(window_minutes=30)
+command_log = CommandLog(max_entries=100)
+router = CodexRouter(telemetry_hook=telemetry_tracker.record)
+ACTIVE_CONNECTIONS: set[WebSocket] = set()
 
 
 def _now_iso() -> str:
@@ -48,9 +54,26 @@ def root() -> Dict[str, Any]:
     }
 
 
+@app.get("/telemetry")
+def telemetry_snapshot() -> Dict[str, Any]:
+    return {
+        "type": "telemetry",
+        "payload": telemetry_tracker.snapshot(),
+        "ts": _now_iso(),
+    }
+
+
+@app.get("/command-log")
+def command_log_snapshot(limit: int = 100) -> Dict[str, Any]:
+    entries = command_log.snapshot(limit=limit)
+    return {"entries": entries, "ts": _now_iso()}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     await ws.accept()
+    ACTIVE_CONNECTIONS.add(ws)
+    heartbeat = asyncio.create_task(_telemetry_heartbeat(ws))
     await ws.send_json(
         {
             "id": str(uuid.uuid4()),
@@ -60,6 +83,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             "route": "system",
         }
     )
+    await ws.send_json(_telemetry_payload())
 
     try:
         while True:
@@ -77,6 +101,13 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 )
                 continue
 
+            staged_entry = command_log.stage(
+                command_id=data["id"],
+                text=data["content"],
+                route_override=data.get("routeOverride"),
+            )
+            await _broadcast_command_event(staged_entry)
+
             await ws.send_json(
                 {
                     "id": data["id"],
@@ -88,8 +119,35 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 }
             )
 
-            response = await router.handle_message(data)
-            await ws.send_json(response)
+            dispatched_entry = command_log.mark_dispatched(data["id"])
+            if dispatched_entry:
+                await _broadcast_command_event(dispatched_entry)
+
+            try:
+                response = await router.handle_message(data)
+                completed_entry = command_log.mark_completed(
+                    data["id"],
+                    model=response.get("model"),
+                    route=response.get("route"),
+                )
+                if completed_entry:
+                    await _broadcast_command_event(completed_entry)
+                await ws.send_json(response)
+                await _broadcast_telemetry()
+            except Exception as exc:  # pylint: disable=broad-except
+                error_entry = command_log.mark_error(data["id"], str(exc))
+                if error_entry:
+                    await _broadcast_command_event(error_entry)
+                logging.exception("WebSocket handling failed: %s", exc)
+                await ws.send_json(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "role": "system",
+                        "content": "Backend error encountered. Check logs.",
+                        "ts": _now_iso(),
+                        "route": "error",
+                    }
+                )
     except WebSocketDisconnect:
         logging.info("WebSocket disconnected")
     except Exception as exc:  # pylint: disable=broad-except
@@ -106,6 +164,52 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             )
             await asyncio.sleep(0)
             await ws.close(code=1011, reason="server error")
+    finally:
+        ACTIVE_CONNECTIONS.discard(ws)
+        heartbeat.cancel()
+
+
+async def _telemetry_heartbeat(ws: WebSocket) -> None:
+    try:
+        while True:
+            await asyncio.sleep(10)
+            if ws.application_state != WebSocketState.CONNECTED:
+                break
+            await ws.send_json(_telemetry_payload())
+    except asyncio.CancelledError:  # pragma: no cover
+        return
+    except Exception:  # pragma: no cover
+        logging.debug("Telemetry heartbeat failed", exc_info=True)
+
+
+async def _broadcast_command_event(entry: CommandEntry) -> None:
+    await _broadcast({"type": "command_log", "entry": asdict(entry)})
+
+
+async def _broadcast_telemetry() -> None:
+    await _broadcast(_telemetry_payload())
+
+
+def _telemetry_payload() -> Dict[str, Any]:
+    return {
+        "type": "telemetry",
+        "payload": telemetry_tracker.snapshot(),
+        "ts": _now_iso(),
+    }
+
+
+async def _broadcast(message: Dict[str, Any]) -> None:
+    dead: List[WebSocket] = []
+    for client in list(ACTIVE_CONNECTIONS):
+        try:
+            if client.application_state == WebSocketState.CONNECTED:
+                await client.send_json(message)
+            else:
+                dead.append(client)
+        except Exception:
+            dead.append(client)
+    for client in dead:
+        ACTIVE_CONNECTIONS.discard(client)
 
 
 def _coerce_payload(raw: str) -> Dict[str, Any]:

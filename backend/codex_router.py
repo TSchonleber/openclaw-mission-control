@@ -9,11 +9,12 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 import httpx
 
 from cursor_adapter import call_cursor
+from telemetry import TelemetryEvent
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,10 +41,11 @@ class CodexMeta:
 class CodexRouter:
     """Simple heuristic router for chat vs code prompts."""
 
-    def __init__(self) -> None:
+    def __init__(self, telemetry_hook: Optional[Callable[[TelemetryEvent], None]] = None) -> None:
         self._history: list[Dict[str, Any]] = []
         self._http_timeout = httpx.Timeout(45.0)
         self._openai_key = os.getenv("OPENAI_API_KEY")
+        self._telemetry_hook = telemetry_hook
 
     def status_summary(self) -> Dict[str, Any]:
         return {
@@ -52,14 +54,23 @@ class CodexRouter:
         }
 
     async def handle_message(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        received_at = datetime.now(timezone.utc)
         text = payload.get("content", "")
         route_override = payload.get("routeOverride")
         meta = self._select_route(text, route_override)
-        assistant_text = await self._generate(text, meta)
+        routed_at = datetime.now(timezone.utc)
+        error = False
+        try:
+            assistant_text = await self._generate(text, meta)
+        except Exception as exc:  # pylint: disable=broad-except
+            error = True
+            LOGGER.exception("Router generate failed: %s", exc)
+            assistant_text = f"[router error] {exc}"
+        responded_at = datetime.now(timezone.utc)
         response = {
             "id": str(uuid.uuid4()),
             "role": "assistant",
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": responded_at.isoformat(),
             "route": meta.route,
             "model": meta.model,
             "meta": {"reason": meta.reason},
@@ -67,6 +78,16 @@ class CodexRouter:
         }
         self._history.append({"user": payload, "assistant": response})
         self._history = self._history[-50:]
+        self._emit_telemetry(
+            TelemetryEvent(
+                received_at=received_at,
+                routed_at=routed_at,
+                responded_at=responded_at,
+                route=meta.route,
+                model=meta.model,
+                error=error,
+            )
+        )
         return response
 
     async def _generate(self, prompt: str, meta: CodexMeta) -> str:
@@ -107,3 +128,11 @@ class CodexRouter:
         joined = " ".join(preview)
         truncated = (joined[:320] + "…") if len(joined) > 320 else joined
         return f"[{meta.model}] Logged your request. (Preview: {truncated})"
+
+    def _emit_telemetry(self, event: TelemetryEvent) -> None:
+        if self._telemetry_hook is None:
+            return
+        try:
+            self._telemetry_hook(event)
+        except Exception:  # pragma: no cover - defensive
+            LOGGER.debug("Telemetry hook failed", exc_info=True)
