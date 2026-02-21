@@ -152,22 +152,30 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
     if (nextIndex >= 0) setIndex(nextIndex)
   }, [activeAgent, agents])
 
-  const shift = useCallback((delta = 1) => {
+  const shift = useCallback((delta = 1, { userInitiated = false } = {}) => {
     setIndex(prev => {
       const next = (prev + delta + agents.length) % agents.length
-      onSelect?.(agents[next].id)
+      if (userInitiated) onSelect?.(agents[next].id)
       return next
     })
   }, [agents, onSelect])
+
+  const handlePrev = () => shift(-1, { userInitiated: true })
+  const handleNext = () => shift(1, { userInitiated: true })
+
+  useEffect(() => {
+    const interval = setInterval(() => shift(1, { userInitiated: false }), 6000)
+    return () => clearInterval(interval)
+  }, [shift])
 
   const current = agents[index] || agents[0]
 
   return (
     <div className="agent-carousel">
       <div className="carousel-controls">
-        <button onClick={() => shift(-1)} aria-label="Previous agent">←</button>
+        <button onClick={handlePrev} aria-label="Previous agent">←</button>
         <span>Agents</span>
-        <button onClick={() => shift(1)} aria-label="Next agent">→</button>
+        <button onClick={handleNext} aria-label="Next agent">→</button>
       </div>
       <div className="carousel-card">
         <div className="persona-avatar">{current.name[0]}</div>
@@ -376,6 +384,7 @@ export default function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [routePref, setRoutePref] = useState('aster')
+  const [carouselAgent, setCarouselAgent] = useState('aster')
   const [status, setStatus] = useState('connecting')
   const [queue, setQueue] = useState([])
   const [lastSeen, setLastSeen] = useState(null)
@@ -731,6 +740,11 @@ const heroCTA = () => handlePrompt(QUICK_PROMPTS[0].text)
 const handleEnterHub = () => setHasEntered(true)
 
 
+  const updateRoutePref = value => {
+    setRoutePref(value)
+    setCarouselAgent(value)
+  }
+
   const handleCommandAdd = event => {
     event.preventDefault()
     if (!newCommand.trim()) return
@@ -801,7 +815,7 @@ const handleEnterHub = () => setHasEntered(true)
         <div className="nav-actions">
           <label className="route-toggle">
             <span>Route</span>
-            <select value={routePref} onChange={e => setRoutePref(e.target.value)}>
+            <select value={routePref} onChange={e => updateRoutePref(e.target.value)}>
               {ROUTE_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -912,7 +926,7 @@ const handleEnterHub = () => setHasEntered(true)
             <h2>Agent capsule</h2>
             <p>Persona tuning plus latest field signals.</p>
           </div>
-          <AgentCarousel agents={AGENT_PROFILES} activeAgent={routePref} onSelect={setRoutePref} />
+          <AgentCarousel agents={AGENT_PROFILES} activeAgent={carouselAgent} onSelect={updateRoutePref} />
           <div className="stack-hero" style={{ backgroundImage: `url(${heroHall})` }}>
             <div>
               <p className="eyebrow">Ops corridor</p>
