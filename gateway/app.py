@@ -134,10 +134,14 @@ async def _dispatch_command(agent_id: str, payload: CommandPayload, command_id: 
         )
         await _broadcast({"type": "telemetry", "payload": telemetry.snapshot(), "ts": _now()})
 
+        content = response.get("message") or response.get("content")
+        if not content:
+            data = response.get("response") or {}
+            content = data.get("message") or data.get("content") or ''
         message_payload = {
             "id": response.get("id") or command_id,
             "role": "assistant",
-            "content": response.get("message") or response.get("content"),
+            "content": content,
             "route": agent_id,
             "model": model,
             "ts": responded_at.isoformat(),
