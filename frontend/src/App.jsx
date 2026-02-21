@@ -54,6 +54,82 @@ const DEFAULT_DIRECTIVES = [
   'LogKeeper widget must surface errors instantly'
 ]
 
+const NAV_SECTIONS = [
+  { label: 'Dashboard', key: 'dashboard' },
+  { label: 'Agents', key: 'agents' },
+  { label: 'Logs', key: 'logs' },
+  { label: 'Missions', key: 'missions' }
+]
+
+const AGENT_PROFILES = [
+  { id: 'aster', name: 'Aster', title: 'Front door strategist', traits: ['decisive', 'orchestrator', 'calm'], summary: 'Routes work, keeps the crew aligned, and sets the next three moves.' },
+  { id: 'nara', name: 'Main (Nara)', title: 'Autonomous build siren', traits: ['seductive', 'cunning', 'financially wired'], summary: 'Owns the whole UX/frontline experience and demands reliable contracts.' },
+  { id: 'iris', name: 'Iris', title: 'Backend + integrations', traits: ['methodical', 'precise', 'observability-first'], summary: 'Keeps every service boring, debuggable, and wired into the rest of the stack.' },
+  { id: 'osiris', name: 'Osiris', title: 'Systems + memory keeper', traits: ['archivist', 'stability', 'coordination'], summary: 'Documents, curates, and keeps the team’s long-term memory sharp.' }
+]
+
+const NavRail = ({ sections }) => (
+  <nav className="nav-rail">
+    <div className="nav-logo">🧭</div>
+    <ul>
+      {sections.map(section => (
+        <li key={section.key}>
+          <a href={`#${section.key}`}>{section.label}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)
+
+const LandingOverlay = ({ onEnter }) => (
+  <div className="landing-overlay">
+    <div className="landing-card">
+      <span className="eyebrow">Nara Systems</span>
+      <h1>Spin up the control nexus</h1>
+      <p>Secure interface for directing Aster, Nara, Iris, and Osiris. Continue to breach the deck.</p>
+      <button onClick={onEnter}>Enter the hub</button>
+    </div>
+  </div>
+)
+
+const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
+  const [index, setIndex] = useState(() => Math.max(0, agents.findIndex(agent => agent.id === activeAgent)))
+
+  useEffect(() => {
+    const nextIndex = agents.findIndex(agent => agent.id === activeAgent)
+    if (nextIndex >= 0) setIndex(nextIndex)
+  }, [activeAgent, agents])
+
+  const current = agents[index] || agents[0]
+
+  const shift = delta => {
+    const next = (index + delta + agents.length) % agents.length
+    setIndex(next)
+    onSelect?.(agents[next].id)
+  }
+
+  return (
+    <div className="agent-carousel">
+      <div className="carousel-controls">
+        <button onClick={() => shift(-1)} aria-label="Previous agent">←</button>
+        <span>Agents</span>
+        <button onClick={() => shift(1)} aria-label="Next agent">→</button>
+      </div>
+      <div className="carousel-card">
+        <div className="persona-avatar">{current.name[0]}</div>
+        <h3>{current.name}</h3>
+        <p>{current.title}</p>
+        <small>{current.summary}</small>
+        <div className="persona-tags">
+          {current.traits.map(trait => (
+            <span key={trait}>{trait}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const HeroHeader = () => (
   <div className="hero-header" style={{ backgroundImage: `url(${heroConsole})` }}>
     <div className="hero-content">
@@ -80,21 +156,6 @@ const HealthBadge = ({ status, lastSeen }) => {
     </span>
   )
 }
-
-const PersonaCard = ({ profile }) => (
-  <div className="persona-card">
-    <div className="persona-avatar">N</div>
-    <div className="persona-details">
-      <h3>Nara</h3>
-      <span>{profile.tagline}</span>
-      <div className="persona-tags">
-        {profile.traits.map(trait => (
-          <span key={trait}>{trait}</span>
-        ))}
-      </div>
-    </div>
-  </div>
-)
 
 const ConnectionPill = ({ status }) => {
   const map = {
@@ -250,6 +311,14 @@ const commandLogReducer = (state, action) => {
 }
 
 export default function App() {
+  const [hasEntered, setHasEntered] = useState(() => {
+    if (typeof window === 'undefined') return true
+    try {
+      return Boolean(window.sessionStorage.getItem('nara-hub-entered'))
+    } catch {
+      return true
+    }
+  })
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [routePref, setRoutePref] = useState('aster')
@@ -600,7 +669,19 @@ export default function App() {
   const emptyConversation = messages.length === 0
   const disabled = !input.trim() || status === 'error' || status === 'offline'
 
-  const heroCTA = () => handlePrompt(QUICK_PROMPTS[0].text)
+    useEffect(() => {
+    if (hasEntered && typeof window !== 'undefined') {
+      try {
+        window.sessionStorage.setItem('nara-hub-entered', '1')
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [hasEntered])
+
+const heroCTA = () => handlePrompt(QUICK_PROMPTS[0].text)
+const handleEnterHub = () => setHasEntered(true)
+
 
   const handleCommandAdd = event => {
     event.preventDefault()
@@ -626,8 +707,12 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <HeroHeader />
+    <div className={`app-shell ${hasEntered ? 'entered' : ''}`}>
+      {!hasEntered && <LandingOverlay onEnter={handleEnterHub} />}
+      <div className="shell-grid">
+        <NavRail sections={NAV_SECTIONS} />
+        <div className="main-content" id="dashboard">
+          <HeroHeader />
       <header className="nav">
         <div className="brand">
           <span className="brand-mark" />
@@ -732,7 +817,7 @@ export default function App() {
               onKeyDown={handleKeyDown}
             />
             <div className="composer-route-hint">
-              <span>Routing to: {ROUTE_OPTIONS.find(option => option.value === routePref)?.label ?? 'Auto'}</span>
+              <span>Routing to: {ROUTE_OPTIONS.find(option => option.value === routePref)?.label ?? 'Aster (Front Door)'}</span>
             </div>
             <div className="composer-footer">
               <div className="quick-actions">
@@ -755,7 +840,7 @@ export default function App() {
             <h2>Control tower</h2>
             <p>Live directives, queue, and persona tuning.</p>
           </div>
-          <PersonaCard profile={personaProfile} />
+          <AgentCarousel agents={AGENT_PROFILES} activeAgent={routePref} onSelect={setRoutePref} />
           <div className="stack-hero" style={{ backgroundImage: `url(${heroHall})` }}>
             <div>
               <p className="eyebrow">Ops corridor</p>
@@ -798,6 +883,8 @@ export default function App() {
             </div>
           </div>
         </aside>
+      </div>
+      </div>
       </div>
     </div>
   )
