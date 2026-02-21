@@ -951,6 +951,75 @@ textarea:focus {
   font-size: 1rem;
 }
 
+
+.header-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 0 4px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(24px);
+}
+
+.header-nav ul {
+  list-style: none;
+  display: flex;
+  gap: 18px;
+  padding: 0;
+  margin: 0;
+}
+
+.header-nav a {
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding-bottom: 6px;
+  position: relative;
+}
+
+.header-nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.header-nav a:hover,
+.header-nav a:focus {
+  color: var(--text);
+}
+
+.header-nav a:hover::after,
+.header-nav a:focus::after {
+  opacity: 1;
+}
+
+.mission-column {
+  position: sticky;
+  top: 60px;
+}
+
+.mission-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mission-stack .list-card,
+.mission-stack .command-log-panel {
+  margin: 0;
+}
+
 .hero-header {
   width: 100%;
   min-height: 200px;
@@ -1003,66 +1072,9 @@ textarea:focus {
 }
 .shell-grid {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
   gap: 32px;
-  min-height: 100vh;
-}
-
-.nav-column {
-  position: sticky;
-  top: 32px;
-  padding-right: 6px;
-}
-
-.nav-panel {
-  border-radius: var(--radius-soft);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(160deg, rgba(8, 12, 24, 0.95), rgba(4, 7, 16, 0.85));
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  box-shadow: var(--panel-glow);
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
-}
-
-.nav-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.nav-stack .list-card,
-.nav-stack .command-log-panel {
-  margin: 0;
-  background: rgba(8, 10, 20, 0.9);
-  border-color: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 14px rgba(5, 7, 13, 0.35);
-}
-
-@media (max-width: 980px) {
-  .shell-grid {
-    grid-template-columns: 1fr;
-  }
-  .nav-column {
-    position: static;
-    max-height: none;
-    padding-right: 0;
-  }
-  .nav-panel {
-    box-shadow: none;
-  }
-}
-
-.nav-rail {
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  align-items: start;
 }
 
 .nav-logo {
@@ -1076,38 +1088,9 @@ textarea:focus {
   box-shadow: 0 20px 40px rgba(143, 107, 255, 0.35);
 }
 
-.nav-rail ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
-.nav-rail a {
-  text-decoration: none;
-  color: var(--muted);
-  font-size: 0.82rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  padding: 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.nav-rail a::before {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-}
 
-.nav-rail a:hover {
-  color: var(--text);
-}
 
 .main-content {
   display: flex;
@@ -1265,6 +1248,3 @@ textarea:focus {
   margin-bottom: 16px;
 }
 
-.nav-rail ul li a {
-  font-size: 0.85rem;
-}

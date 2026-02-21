@@ -120,8 +120,8 @@ const buildInitialPersonaOverrides = () => {
   return initial
 }
 
-const NavRail = ({ sections }) => (
-  <nav className="nav-rail">
+const HeaderNav = ({ sections }) => (
+  <header className="header-nav">
     <div className="nav-logo">🧭</div>
     <ul>
       {sections.map(section => (
@@ -130,7 +130,7 @@ const NavRail = ({ sections }) => (
         </li>
       ))}
     </ul>
-  </nav>
+  </header>
 )
 
 const LandingOverlay = ({ onEnter }) => (
@@ -771,35 +771,33 @@ const handleEnterHub = () => setHasEntered(true)
   return (
     <div className={`app-shell ${hasEntered ? 'entered' : ''}`}>
       {!hasEntered && <LandingOverlay onEnter={handleEnterHub} />}
+      <HeaderNav sections={NAV_SECTIONS} />
       <div className="shell-grid">
-        <div className="nav-column">
-          <div className="nav-panel">
-            <NavRail sections={NAV_SECTIONS} />
-            <div className="nav-stack">
-              <DirectiveList directives={DEFAULT_DIRECTIVES} />
-              <CommandQueue queue={queue} onComplete={handleCommandComplete} />
-              <CommandLogPanel
-                entries={commandLog}
-                filter={commandFilter}
-                onFilterChange={setCommandFilter}
-                search={commandSearch}
-                onSearchChange={setCommandSearch}
-                loading={commandLogLoading}
-                error={commandLogError}
-              />
-              <form className="list-card command-form" onSubmit={handleCommandAdd}>
-                <h4>Draft a command</h4>
-                <div className="command-form-grid">
-                  <input
-                    type="text"
-                    placeholder="e.g. Run Codex diff for frontend"
-                    value={newCommand}
-                    onChange={e => setNewCommand(e.target.value)}
-                  />
-                  <button type="submit">Stage</button>
-                </div>
-              </form>
-            </div>
+        <div className="mission-column">
+          <div className="mission-stack">
+            <DirectiveList directives={DEFAULT_DIRECTIVES} />
+            <CommandQueue queue={queue} onComplete={handleCommandComplete} />
+            <CommandLogPanel
+              entries={commandLog}
+              filter={commandFilter}
+              onFilterChange={setCommandFilter}
+              search={commandSearch}
+              onSearchChange={setCommandSearch}
+              loading={commandLogLoading}
+              error={commandLogError}
+            />
+            <form className="list-card command-form" onSubmit={handleCommandAdd}>
+              <h4>Draft a command</h4>
+              <div className="command-form-grid">
+                <input
+                  type="text"
+                  placeholder="e.g. Run Codex diff for frontend"
+                  value={newCommand}
+                  onChange={e => setNewCommand(e.target.value)}
+                />
+                <button type="submit">Stage</button>
+              </div>
+            </form>
           </div>
         </div>
         <div className="main-content" id="dashboard">
