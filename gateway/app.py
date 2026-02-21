@@ -25,6 +25,12 @@ app.add_middleware(
 
 command_log = CommandLog(max_entries=150)
 telemetry = TelemetryTracker(window_minutes=30)
+ROUTE_MAP = {
+    "aster": "aster",
+    "nara": "main",
+    "iris": "iris",
+    "osiris": "osiris"
+}
 messages: List[Dict[str, Any]] = []
 connected_clients: Set[WebSocket] = set()
 
@@ -66,6 +72,7 @@ async def status_snapshot() -> Dict[str, Any]:
 
 @app.post("/routes/{agent_id}/messages")
 async def send_command(agent_id: str, payload: CommandPayload, background: BackgroundTasks) -> Dict[str, Any]:
+    target_agent = ROUTE_MAP.get(agent_id, agent_id)
     command_id = str(uuid.uuid4())
     staged_entry = command_log.stage(command_id, payload.message, agent_id, payload.sessionId)
     await _broadcast({"type": "command_log", "entry": staged_entry.__dict__})
@@ -97,7 +104,7 @@ async def _dispatch_command(agent_id: str, payload: CommandPayload, command_id: 
     received_at = datetime.now(timezone.utc)
     try:
         response = await run_agent_command(
-            agent=agent_id,
+            agent=target_agent,
             message=payload.message,
             session_id=payload.sessionId,
             thinking=payload.thinking,

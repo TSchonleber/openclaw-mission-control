@@ -18,13 +18,12 @@ const getWsUrl = () => {
 
 const DEFAULT_WS = getWsUrl()
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-const buildSessionId = route => (route && route !== 'auto' ? `agent:${route}:main` : undefined)
+const buildSessionId = route => (route ? `agent:${route}:main` : undefined)
 const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'aster', label: 'Aster' },
-  { value: 'nara', label: 'Nara' },
+  { value: 'aster', label: 'Aster (Front Door)' },
+  { value: 'nara', label: 'Main (Nara)' },
   { value: 'iris', label: 'Iris' },
   { value: 'osiris', label: 'Osiris' }
 ]
@@ -253,7 +252,7 @@ const commandLogReducer = (state, action) => {
 export default function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const [routePref, setRoutePref] = useState('auto')
+  const [routePref, setRoutePref] = useState('aster')
   const [status, setStatus] = useState('connecting')
   const [queue, setQueue] = useState([])
   const [lastSeen, setLastSeen] = useState(null)
