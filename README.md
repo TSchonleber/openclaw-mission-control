@@ -26,3 +26,11 @@ The frontend connects to `ws://<host>:8000/ws` by default. Override with `VITE_W
 Backend heuristically routes code-heavy prompts to the Cursor Codex adapter
 (`cursor_adapter.py`). Provide credentials via macOS Keychain (service `CURSOR_API_KEY`).
 Chatty prompts stay on the lightweight `gpt-4.1-mini` path.
+
+## Telemetry & Command Log
+
+- `GET /telemetry` returns the latest metrics snapshot; the same payload is also delivered over
+  the WebSocket stream as `{ "type": "telemetry", ... }`.
+- `GET /command-log?limit=100` hydrates the recent command entries; incremental updates arrive
+  as `{ "type": "command_log", "entry": { ... } }` events on the socket.
+- Frontend docs: see `frontend/docs/api.md` for the expected payload shapes.

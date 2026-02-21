@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import heroConsole from './assets/hero-console.jpg'
 import heroHall from './assets/hero-hall.jpg'
+import CommandLogPanel from './components/CommandLogPanel'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -16,7 +17,8 @@ const getWsUrl = () => {
 }
 
 const DEFAULT_WS = getWsUrl()
-
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
   { value: 'auto', label: 'Auto' },
@@ -30,12 +32,19 @@ const QUICK_PROMPTS = [
   { label: 'Diff brief', text: 'Summarize the code changes since the last deploy.' }
 ]
 
-const STACK_SIGNALS = [
-  { label: 'Frontend', value: '5180 • online', tone: 'good', detail: 'Vite dev server' },
-  { label: 'Backend', value: '8000 • listening', tone: 'good', detail: 'FastAPI + WS bridge' },
-  { label: 'Codex router', value: 'idle', tone: 'warn', detail: 'Waiting for directives' },
-  { label: 'LogKeeper', value: 'disconnected', tone: 'idle', detail: 'Hook stream to enable' }
-]
+const LATENCY_BASELINE_MS = 320
+const TRAFFIC_WINDOW_MINUTES = 30
+const MS_IN_MINUTE = 60 * 1000
+
+
+const fetchJson = async path => {
+  const response = await fetch(`${API_BASE}${path}`)
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || `Request failed: ${response.status}`)
+  }
+  return response.json()
+}
 
 const DEFAULT_DIRECTIVES = [
   'Ship the cyberpunk shell before sunrise',
@@ -113,11 +122,52 @@ const MessageBubble = ({ message }) => {
   )
 }
 
-const StatCard = ({ label, value, detail, tone }) => (
-  <div className={`stat-card ${tone}`}>
-    <span>{label}</span>
-    <strong>{value}</strong>
-    <p>{detail}</p>
+const formatNumber = value => Intl.NumberFormat('en-US').format(value)
+
+const getLatestLatency = messages => {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const entry = messages[i]
+    if (entry.role !== 'assistant' || !entry.ts) continue
+    const assistantTs = Date.parse(entry.ts)
+    if (Number.isNaN(assistantTs)) continue
+    for (let j = i - 1; j >= 0; j -= 1) {
+      const candidate = messages[j]
+      if (candidate.role !== 'user' || !candidate.ts) continue
+      const userTs = Date.parse(candidate.ts)
+      if (Number.isNaN(userTs)) continue
+      if (userTs > assistantTs) continue
+      return Math.max(assistantTs - userTs, 0)
+    }
+    break
+  }
+  return null
+}
+
+const getRouteBreakdown = messages => {
+  const tallies = messages.reduce((acc, message) => {
+    if (!message.route) return acc
+    const key = message.route
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
+  const codex = tallies.codex || 0
+  const chat = tallies.chat || 0
+  const total = codex + chat
+  const other = Object.entries(tallies).reduce((sum, [key, count]) => {
+    if (key === 'codex' || key === 'chat') return sum
+    return sum + count
+  }, 0)
+  return {
+    codex,
+    chat,
+    other,
+    total: total + other
+  }
+}
+
+const TelemetryCard = ({ children, tone }) => (
+  <div className={`telemetry-card ${tone}`}>
+    {children}
   </div>
 )
 
@@ -181,13 +231,28 @@ const CommandQueue = ({ queue, onComplete }) => (
   </div>
 )
 
+const commandLogReducer = (state, action) => {
+  switch (action.type) {
+    case 'HYDRATE': {
+      const entries = Array.isArray(action.entries) ? action.entries : []
+      return entries.slice(0, COMMAND_LOG_LIMIT)
+    }
+    case 'UPSERT': {
+      if (!action.entry?.id) return state
+      const filtered = state.filter(item => item.id !== action.entry.id)
+      return [action.entry, ...filtered].slice(0, COMMAND_LOG_LIMIT)
+    }
+    default:
+      return state
+  }
+}
+
 export default function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [routePref, setRoutePref] = useState('auto')
   const [status, setStatus] = useState('connecting')
   const [queue, setQueue] = useState([])
-  const [healthStatus, setHealthStatus] = useState('connecting')
   const [lastSeen, setLastSeen] = useState(null)
   const [newCommand, setNewCommand] = useState('')
   const [personaProfile, setPersonaProfile] = useState({
@@ -199,6 +264,13 @@ export default function App() {
     { key: 'cunning', label: 'Cunning', caption: 'Instinct vs planning', value: 82 },
     { key: 'ruthless', label: 'Ruthless', caption: 'Polish vs velocity', value: 64 }
   ])
+  const [telemetryFeed, setTelemetryFeed] = useState(null)
+  const [telemetryError, setTelemetryError] = useState(null)
+  const [commandLog, dispatchCommandLog] = useReducer(commandLogReducer, [])
+  const [commandLogLoading, setCommandLogLoading] = useState(false)
+  const [commandLogError, setCommandLogError] = useState(null)
+  const [commandFilter, setCommandFilter] = useState('all')
+  const [commandSearch, setCommandSearch] = useState('')
 
   const wsRef = useRef(null)
   const reconnectRef = useRef()
@@ -224,6 +296,22 @@ export default function App() {
         } catch (err) {
           payload = { id: crypto.randomUUID(), role: 'assistant', content: event.data }
         }
+
+        if (payload && payload.type === 'telemetry') {
+          const telemetryPayload = payload.payload || payload.data || payload
+          setTelemetryFeed(telemetryPayload)
+          setTelemetryError(null)
+          return
+        }
+
+        if (payload && payload.type === 'command_log') {
+          const entry = payload.entry || payload.payload || payload
+          dispatchCommandLog({ type: 'UPSERT', entry })
+          setCommandLogLoading(false)
+          setCommandLogError(null)
+          return
+        }
+
         setMessages(prev => [...prev, payload])
       }
 
@@ -255,6 +343,50 @@ export default function App() {
       wsRef.current?.close()
     }
   }, [connect])
+
+  useEffect(() => {
+    let ignore = false
+    fetchJson('/telemetry')
+      .then(data => {
+        if (!ignore) {
+          setTelemetryFeed(data)
+          setTelemetryError(null)
+        }
+      })
+      .catch(err => {
+        if (!ignore) {
+          setTelemetryError(err.message)
+          console.warn('Telemetry fetch failed', err)
+        }
+      })
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let ignore = false
+    setCommandLogLoading(true)
+    fetchJson('/command-log?limit=100')
+      .then(entries => {
+        if (!ignore) {
+          dispatchCommandLog({ type: 'HYDRATE', entries })
+          setCommandLogError(null)
+        }
+      })
+      .catch(err => {
+        if (!ignore) {
+          setCommandLogError(err.message)
+          console.warn('Command log fetch failed', err)
+        }
+      })
+      .finally(() => {
+        if (!ignore) setCommandLogLoading(false)
+      })
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!scrollRef.current) return
@@ -303,6 +435,129 @@ export default function App() {
         time: msg.ts ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'
       }))
   }, [messages])
+
+  const derivedTelemetry = useMemo(() => {
+    const now = Date.now()
+    const latencyMs = getLatestLatency(messages)
+    const latencyTone = latencyMs === null ? 'idle' : latencyMs < 500 ? 'good' : latencyMs < 1200 ? 'warn' : 'error'
+    const latencyDelta = latencyMs === null ? null : latencyMs - LATENCY_BASELINE_MS
+    const latencyLabel = latencyMs === null ? '—' : `${Math.max(Math.round(latencyMs), 0)} ms`
+    const latencyTrend = latencyDelta === null ? 'No data yet' : `${latencyDelta >= 0 ? '+' : '−'}${Math.abs(Math.round(latencyDelta))} ms vs baseline`
+
+    const windowMs = TRAFFIC_WINDOW_MINUTES * MS_IN_MINUTE
+    const windowMessages = messages.filter(msg => msg.ts && now - Date.parse(msg.ts) <= windowMs)
+    const perHour = windowMessages.length === 0
+      ? 0
+      : Math.round((windowMessages.length / TRAFFIC_WINDOW_MINUTES) * 60)
+    const trafficTone = perHour === 0 ? 'idle' : perHour > 180 ? 'warn' : 'good'
+
+    const { codex, chat, other, total } = getRouteBreakdown(messages)
+    const routeTone = total === 0 ? 'idle' : codex / Math.max(total, 1) > 0.6 ? 'warn' : 'good'
+    const codexPct = total ? Math.round((codex / total) * 100) : 0
+    const chatPct = total ? Math.round((chat / total) * 100) : 0
+    const otherPct = total ? Math.max(0, 100 - codexPct - chatPct) : 0
+
+    const statusMeta = {
+      online: { label: 'Stable link', tone: 'good', hint: lastSeen ? `Last ping ${lastSeen}` : 'Awaiting manual ping' },
+      reconnecting: { label: 'Reconnecting…', tone: 'warn', hint: 'Retrying socket in background' },
+      connecting: { label: 'Dialing…', tone: 'warn', hint: 'Negotiating websocket' },
+      error: { label: 'Error state', tone: 'error', hint: 'Check backend logs' },
+      offline: { label: 'Offline', tone: 'idle', hint: 'No socket session' },
+      default: { label: 'Unknown', tone: 'idle', hint: 'No status emitted' }
+    }
+    const connection = statusMeta[status] || statusMeta.default
+
+    return {
+      latency: {
+        tone: latencyTone,
+        value: latencyLabel,
+        detail: latencyMs === null ? 'Waiting on first round-trip' : 'p95 user → Codex → user',
+        trend: latencyTrend
+      },
+      traffic: {
+        tone: trafficTone,
+        value: perHour ? `${formatNumber(perHour)} msgs/hr` : 'Idle lane',
+        detail: `${windowMessages.length} events in ${TRAFFIC_WINDOW_MINUTES}m`,
+        trend: perHour > 0 ? 'Live feed' : 'No recent events'
+      },
+      route: {
+        tone: routeTone,
+        codexPct,
+        chatPct,
+        otherPct,
+        detail: total ? `${codex} Codex • ${chat} Chat${other ? ` • ${other} misc` : ''}` : 'No routed traffic yet'
+      },
+      connection: {
+        tone: connection.tone,
+        value: connection.label,
+        detail: connection.hint,
+        trend: status.replace(/^(.)/, match => match.toUpperCase())
+      }
+    }
+  }, [lastSeen, messages, status])
+
+  const telemetry = useMemo(() => {
+    if (!telemetryFeed) return derivedTelemetry
+    const data = telemetryFeed.payload || telemetryFeed.data || telemetryFeed
+    const formatMs = value => (value === null || value === undefined ? '—' : `${Math.round(value)} ms`)
+
+    const latencyData = data.latency || {}
+    const latency = {
+      tone: latencyData.tone || derivedTelemetry.latency.tone,
+      value: latencyData.latest_ms != null ? formatMs(latencyData.latest_ms) : derivedTelemetry.latency.value,
+      detail:
+        latencyData.p50_ms != null || latencyData.p95_ms != null
+          ? `p50 ${formatMs(latencyData.p50_ms)} • p95 ${formatMs(latencyData.p95_ms)}`
+          : derivedTelemetry.latency.detail,
+      trend: latencyData.trend || derivedTelemetry.latency.trend
+    }
+
+    const trafficData = data.traffic || {}
+    const perHourFromMinute = typeof trafficData.per_minute === 'number' ? Math.round(trafficData.per_minute * 60) : null
+    const perHourValue = typeof trafficData.per_hour === 'number' ? Math.round(trafficData.per_hour) : perHourFromMinute
+    const traffic = {
+      tone: trafficData.tone || derivedTelemetry.traffic.tone,
+      value:
+        perHourValue != null
+          ? `${formatNumber(perHourValue)} msgs/hr`
+          : derivedTelemetry.traffic.value,
+      detail:
+        trafficData.total != null
+          ? `${trafficData.total} events in ${trafficData.window_minutes || TRAFFIC_WINDOW_MINUTES}m`
+          : derivedTelemetry.traffic.detail,
+      trend: trafficData.trend || derivedTelemetry.traffic.trend
+    }
+
+    const routeData = data.routes || data.route || {}
+    const codexPct = routeData.codex_pct ?? derivedTelemetry.route.codexPct
+    const chatPct = routeData.chat_pct ?? derivedTelemetry.route.chatPct
+    const otherPct = routeData.other_pct ?? derivedTelemetry.route.otherPct
+    const detailPieces = []
+    if (typeof routeData.codex === 'number') detailPieces.push(`${routeData.codex} Codex`)
+    if (typeof routeData.chat === 'number') detailPieces.push(`${routeData.chat} Chat`)
+    if (typeof routeData.other === 'number' && routeData.other > 0) detailPieces.push(`${routeData.other} misc`)
+    const route = {
+      tone: routeData.tone || derivedTelemetry.route.tone,
+      codexPct,
+      chatPct,
+      otherPct,
+      detail: detailPieces.length ? detailPieces.join(' • ') : derivedTelemetry.route.detail
+    }
+
+    const connectionData = data.connection || {}
+    const errors = data.errors || {}
+    const connection = {
+      tone: connectionData.tone || derivedTelemetry.connection.tone,
+      value: connectionData.label || connectionData.status || derivedTelemetry.connection.value,
+      detail: telemetryError
+        ? `Telemetry feed offline — ${telemetryError}`
+        : connectionData.detail ||
+          (errors.rate != null ? `${Math.round(errors.rate * 100)}% error rate` : derivedTelemetry.connection.detail),
+      trend: connectionData.trend || derivedTelemetry.connection.trend
+    }
+
+    return { latency, traffic, route, connection }
+  }, [derivedTelemetry, telemetryError, telemetryFeed])
 
   const emptyConversation = messages.length === 0
   const disabled = !input.trim() || status === 'error' || status === 'offline'
@@ -358,10 +613,51 @@ export default function App() {
         </div>
       </header>
 
-      <section className="stat-grid">
-        {STACK_SIGNALS.map(signal => (
-          <StatCard key={signal.label} {...signal} />
-        ))}
+      <section className="stat-grid telemetry-grid">
+        <TelemetryCard tone={telemetry.latency.tone}>
+          <div className="telemetry-meta">
+            <span className="eyebrow">Latency</span>
+            <span className="pill subtle">{telemetry.latency.trend}</span>
+          </div>
+          <strong>{telemetry.latency.value}</strong>
+          <p>{telemetry.latency.detail}</p>
+        </TelemetryCard>
+
+        <TelemetryCard tone={telemetry.traffic.tone}>
+          <div className="telemetry-meta">
+            <span className="eyebrow">Traffic</span>
+            <span className="pill subtle">{telemetry.traffic.trend}</span>
+          </div>
+          <strong>{telemetry.traffic.value}</strong>
+          <p>{telemetry.traffic.detail}</p>
+        </TelemetryCard>
+
+        <TelemetryCard tone={telemetry.route.tone}>
+          <div className="telemetry-meta">
+            <span className="eyebrow">Route mix</span>
+            <span className="pill subtle">Live split</span>
+          </div>
+          <div className="mix-bars">
+            <div className="mix-segment codex" style={{ width: `${telemetry.route.codexPct}%` }} />
+            <div className="mix-segment chat" style={{ width: `${telemetry.route.chatPct}%` }} />
+            <div className="mix-segment other" style={{ width: `${telemetry.route.otherPct}%` }} />
+          </div>
+          <div className="mix-legend">
+            <span>Codex {telemetry.route.codexPct}%</span>
+            <span>Chat {telemetry.route.chatPct}%</span>
+            {telemetry.route.otherPct > 0 && <span>Other {telemetry.route.otherPct}%</span>}
+          </div>
+          <p>{telemetry.route.detail}</p>
+        </TelemetryCard>
+
+        <TelemetryCard tone={telemetry.connection.tone}>
+          <div className="telemetry-meta">
+            <span className="eyebrow">Connection</span>
+            <span className={`pill ${status}`}>{telemetry.connection.trend}</span>
+          </div>
+          <strong>{telemetry.connection.value}</strong>
+          <p>{telemetry.connection.detail}</p>
+        </TelemetryCard>
       </section>
 
       <div className="layout">
@@ -427,6 +723,16 @@ export default function App() {
           <DirectiveList directives={DEFAULT_DIRECTIVES} />
           <PersonaTuner personaState={personaControls} onAdjust={handlePersonaAdjust} />
           <CommandQueue queue={queue} onComplete={handleCommandComplete} />
+
+          <CommandLogPanel
+            entries={commandLog}
+            filter={commandFilter}
+            onFilterChange={setCommandFilter}
+            search={commandSearch}
+            onSearchChange={setCommandSearch}
+            loading={commandLogLoading}
+            error={commandLogError}
+          />
 
           <form className="list-card command-form" onSubmit={handleCommandAdd}>
             <h4>Draft a command</h4>
