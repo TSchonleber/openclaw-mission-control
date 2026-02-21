@@ -110,7 +110,9 @@ async def _dispatch_command(agent_id: str, target_agent: str, payload: CommandPa
             thinking=payload.thinking,
         )
         responded_at = datetime.now(timezone.utc)
-        model = response.get("model") or response.get("meta", {}).get("model")
+        meta = response.get("meta", {})
+        agent_meta = meta.get("agentMeta", {}) if isinstance(meta, dict) else {}
+        model = agent_meta.get("model") or response.get("model")
 
         completed = command_log.mark_completed(command_id, model=model, route=agent_id)
         if completed:
@@ -135,6 +137,11 @@ async def _dispatch_command(agent_id: str, target_agent: str, payload: CommandPa
         await _broadcast({"type": "telemetry", "payload": telemetry.snapshot(), "ts": _now()})
 
         content = response.get("message") or response.get("content")
+        if not content:
+            payloads = response.get("payloads") or []
+            if payloads:
+                first = payloads[0] or {}
+                content = first.get("text") or first.get("content")
         if not content:
             data = response.get("response") or {}
             content = data.get("message") or data.get("content") or ''
