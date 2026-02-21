@@ -558,6 +558,11 @@ textarea:focus {
   flex-direction: column;
   gap: 16px;
   padding: 24px;
+  position: sticky;
+  top: 32px;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 .persona-card {
@@ -607,9 +612,9 @@ textarea:focus {
 }
 
 .list-card h4 {
-  margin: 0 0 10px;
-  font-size: 0.78rem;
-  letter-spacing: 0.2em;
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -1006,34 +1011,34 @@ textarea:focus {
 .nav-column {
   position: sticky;
   top: 32px;
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
-  padding-right: 8px;
+  padding-right: 6px;
 }
 
 .nav-panel {
   border-radius: var(--radius-soft);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: radial-gradient(circle at top, rgba(32, 211, 255, 0.08), rgba(5, 6, 14, 0.92));
-  padding: 28px 22px;
+  background: linear-gradient(160deg, rgba(8, 12, 24, 0.95), rgba(4, 7, 16, 0.85));
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 22px;
   box-shadow: var(--panel-glow);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
 }
 
 .nav-stack {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .nav-stack .list-card,
 .nav-stack .command-log-panel {
   margin: 0;
-  background: rgba(10, 12, 22, 0.88);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 20px rgba(5, 7, 13, 0.35);
+  background: rgba(8, 10, 20, 0.9);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 14px rgba(5, 7, 13, 0.35);
 }
 
 @media (max-width: 980px) {
@@ -1057,7 +1062,7 @@ textarea:focus {
   background: transparent;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .nav-logo {
@@ -1077,16 +1082,27 @@ textarea:focus {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .nav-rail a {
   text-decoration: none;
   color: var(--muted);
-  font-size: 0.9rem;
-  letter-spacing: 0.15em;
+  font-size: 0.82rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  padding: 4px 0;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-rail a::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .nav-rail a:hover {
