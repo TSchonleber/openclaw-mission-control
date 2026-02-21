@@ -763,7 +763,34 @@ const handleEnterHub = () => setHasEntered(true)
     <div className={`app-shell ${hasEntered ? 'entered' : ''}`}>
       {!hasEntered && <LandingOverlay onEnter={handleEnterHub} />}
       <div className="shell-grid">
-        <NavRail sections={NAV_SECTIONS} />
+        <div className="nav-column">
+          <NavRail sections={NAV_SECTIONS} />
+          <div className="nav-stack">
+            <DirectiveList directives={DEFAULT_DIRECTIVES} />
+            <CommandQueue queue={queue} onComplete={handleCommandComplete} />
+            <CommandLogPanel
+              entries={commandLog}
+              filter={commandFilter}
+              onFilterChange={setCommandFilter}
+              search={commandSearch}
+              onSearchChange={setCommandSearch}
+              loading={commandLogLoading}
+              error={commandLogError}
+            />
+            <form className="list-card command-form" onSubmit={handleCommandAdd}>
+              <h4>Draft a command</h4>
+              <div className="command-form-grid">
+                <input
+                  type="text"
+                  placeholder="e.g. Run Codex diff for frontend"
+                  value={newCommand}
+                  onChange={e => setNewCommand(e.target.value)}
+                />
+                <button type="submit">Stage</button>
+              </div>
+            </form>
+          </div>
+        </div>
         <div className="main-content" id="dashboard">
           <HeroHeader />
           <header className="nav">
@@ -890,8 +917,8 @@ const handleEnterHub = () => setHasEntered(true)
 
         <aside className="panel stack-panel">
           <div className="panel-header">
-            <h2>Control tower</h2>
-            <p>Live directives, queue, and persona tuning.</p>
+            <h2>Agent capsule</h2>
+            <p>Persona tuning plus latest field signals.</p>
           </div>
           <AgentCarousel agents={AGENT_PROFILES} activeAgent={routePref} onSelect={setRoutePref} />
           <div className="stack-hero" style={{ backgroundImage: `url(${heroHall})` }}>
@@ -900,33 +927,7 @@ const handleEnterHub = () => setHasEntered(true)
               <strong>All systems awaiting directives</strong>
             </div>
           </div>
-          <DirectiveList directives={DEFAULT_DIRECTIVES} />
           <PersonaTuner personaState={personaControls} onAdjust={handlePersonaAdjust} />
-          <CommandQueue queue={queue} onComplete={handleCommandComplete} />
-
-          <CommandLogPanel
-            entries={commandLog}
-            filter={commandFilter}
-            onFilterChange={setCommandFilter}
-            search={commandSearch}
-            onSearchChange={setCommandSearch}
-            loading={commandLogLoading}
-            error={commandLogError}
-          />
-
-          <form className="list-card command-form" onSubmit={handleCommandAdd}>
-            <h4>Draft a command</h4>
-            <div className="command-form-grid">
-              <input
-                type="text"
-                placeholder="e.g. Run Codex diff for frontend"
-                value={newCommand}
-                onChange={e => setNewCommand(e.target.value)}
-              />
-              <button type="submit">Stage</button>
-            </div>
-          </form>
-
           <div className="list-card">
             <h4>Recent activity</h4>
             <div className="activity-list">
