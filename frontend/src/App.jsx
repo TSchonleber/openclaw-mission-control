@@ -875,13 +875,8 @@ const handleEnterHub = () => setHasEntered(true)
           </div>
           <div className="messages-scroll" ref={scrollRef}>
             {emptyConversation && (
-              <div className="conversation-empty">
-                <p className="eyebrow">Command deck idle</p>
-                <h3>Drop a directive to wake the stack.</h3>
-                <p>Codex routes are standing by. Use a quick prompt or type freely.</p>
-                <div className="empty-actions">
-                  <button onClick={heroCTA}>Run quick pulse</button>
-                </div>
+              <div className="conversation-empty-inline">
+                <button onClick={heroCTA}>Run quick pulse</button>
               </div>
             )}
             {messages.map(message => (
