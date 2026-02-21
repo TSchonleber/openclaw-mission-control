@@ -160,11 +160,6 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
     })
   }, [agents, onSelect])
 
-  useEffect(() => {
-    const interval = setInterval(() => shift(1), 6000)
-    return () => clearInterval(interval)
-  }, [shift])
-
   const current = agents[index] || agents[0]
 
   return (
