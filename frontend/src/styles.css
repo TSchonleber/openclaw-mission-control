@@ -1906,3 +1906,27 @@ button.ghost:hover {
     margin-left: 0;
   }
 }
+
+@media (max-width: 900px) {
+  .shell-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-column {
+    position: static;
+    width: 100%;
+  }
+
+  .mission-stack {
+    flex-direction: column;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stack-panel {
+    position: static;
+    max-height: none;
+  }
+}
