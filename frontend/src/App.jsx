@@ -317,6 +317,14 @@ export default function App() {
           return
         }
 
+        if (payload && payload.type === 'message') {
+          const messagePayload = payload.message || payload.payload || payload.data
+          if (messagePayload) {
+            setMessages(prev => [...prev, messagePayload])
+            return
+          }
+        }
+
         setMessages(prev => [...prev, payload])
       }
 
