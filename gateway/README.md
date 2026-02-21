@@ -32,3 +32,14 @@ Configure the frontend to point at the service:
 VITE_API_BASE_URL=https://<gateway-host>
 VITE_WS_URL=wss://<gateway-host>/ws
 ```
+## Bring Your Own OpenClaw
+
+The gateway intentionally keeps **all credentials on your machine**. To run it with your own agent crew:
+
+1. Install and configure OpenClaw on the host (run `openclaw agents list` to confirm your agents exist).
+2. Clone this repo and follow the setup steps above.
+3. Launch the service (locally or via a process manager such as LaunchAgent/systemd).
+4. Expose `http(s)://<host>:9000` to the frontend (tunnel, reverse proxy, or public VM).
+
+Because the service simply shells out to `openclaw agent --agent <id> --json`, anyone can drop in their own OpenClaw install + workspace and reskin the frontend without storing secrets in this repo.
+

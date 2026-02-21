@@ -32,7 +32,7 @@ connected_clients: Set[WebSocket] = set()
 class CommandPayload(BaseModel):
     message: str = Field(..., min_length=1)
     sessionId: Optional[str] = None
-    thinking: Optional[str] = Field(default=None, regex=r"^(off|minimal|low|medium|high)?$")
+    thinking: Optional[str] = Field(default=None, pattern=r"^(off|minimal|low|medium|high)?$")
 
 
 @app.get("/")
