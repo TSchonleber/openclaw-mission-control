@@ -77,7 +77,7 @@ async def send_command(agent_id: str, payload: CommandPayload, background: Backg
     staged_entry = command_log.stage(command_id, payload.message, agent_id, payload.sessionId)
     await _broadcast({"type": "command_log", "entry": staged_entry.__dict__})
 
-    background.add_task(_dispatch_command, agent_id, payload, command_id)
+    background.add_task(_dispatch_command, agent_id, target_agent, payload, command_id)
     return {"id": command_id, "status": "queued"}
 
 
@@ -96,7 +96,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         connected_clients.discard(ws)
 
 
-async def _dispatch_command(agent_id: str, payload: CommandPayload, command_id: str) -> None:
+async def _dispatch_command(agent_id: str, target_agent: str, payload: CommandPayload, command_id: str) -> None:
     dispatched = command_log.mark_dispatched(command_id)
     if dispatched:
         await _broadcast({"type": "command_log", "entry": dispatched.__dict__})
