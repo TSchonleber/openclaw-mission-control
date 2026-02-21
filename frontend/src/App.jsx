@@ -2,6 +2,14 @@ import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } 
 import heroConsole from './assets/hero-console.jpg'
 import heroHall from './assets/hero-hall.jpg'
 import CommandLogPanel from './components/CommandLogPanel'
+import OpsFeed from './components/OpsFeed'
+import MemoryStream from './components/MemoryStream'
+import CalendarPreview from './components/CalendarPreview'
+import TaskBoardPage from './components/TaskBoardPage'
+import avatarAster from './assets/avatars/aster.jpg'
+import avatarNara from './assets/avatars/nara.jpg'
+import avatarIris from './assets/avatars/iris.jpg'
+import avatarOsiris from './assets/avatars/osiris.jpg'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -38,6 +46,130 @@ const LATENCY_BASELINE_MS = 320
 const TRAFFIC_WINDOW_MINUTES = 30
 const MS_IN_MINUTE = 60 * 1000
 
+const OWNER_SEQUENCE = ['Iris', 'Terrence', 'Aster', 'Osiris']
+const STATUS_SEQUENCE = ['backlog', 'in-progress', 'review', 'done']
+const TASKS_STORAGE_KEY = 'mission-control/tasks'
+
+const INITIAL_TASKS = [
+  {
+    id: 'task-avatar-pipeline',
+    title: 'Finish agent avatar pipeline',
+    owner: 'Iris',
+    status: 'review',
+    description: 'Import portrait art + wire carousel badges before shipping Mission Control.',
+    updatedAt: '1h ago'
+  },
+  {
+    id: 'task-dashboard-widgets',
+    title: 'Polish intel widgets',
+    owner: 'Terrence',
+    status: 'in-progress',
+    description: 'Ensure Ops Feed, Memory Stream, and Calendar render clean placeholder data.',
+    updatedAt: '28m ago'
+  },
+  {
+    id: 'task-iris-contracts',
+    title: 'Stabilize backend contracts',
+    owner: 'Aster',
+    status: 'backlog',
+    description: 'Confirm gateway endpoints + Codex routes align with new task board.',
+    updatedAt: 'Queued'
+  },
+  {
+    id: 'task-memory-lane',
+    title: 'Document sprint reflections',
+    owner: 'Osiris',
+    status: 'review',
+    description: 'Fold Memory Bank notes into Mission Control brief.',
+    updatedAt: 'Today'
+  },
+  {
+    id: 'task-board-compose',
+    title: 'Wire task composer UX',
+    owner: 'Terrence',
+    status: 'done',
+    description: 'Cycle owners Iris→Terrence→Aster→Osiris with inline controls.',
+    updatedAt: 'Shipped'
+  },
+  {
+    id: 'task-nav-toggle',
+    title: 'Link nav to board view',
+    owner: 'Iris',
+    status: 'in-progress',
+    description: 'Header nav should flip between dashboard + tasks.',
+    updatedAt: 'Just now'
+  }
+]
+
+const OPS_FEED_BASE = [
+  { id: 'ops-1', title: 'Deploy command pack to Iris', route: 'codex', status: 'completed', duration: '42s', time: '07:02' },
+  { id: 'ops-2', title: 'Refresh telemetry window', route: 'chat', status: 'dispatched', duration: '18s', time: '06:55' },
+  { id: 'ops-3', title: 'Queue memory sync', route: 'osiris', status: 'staged', time: '06:41' }
+]
+
+const MEMORY_STREAM_ENTRIES = [
+  {
+    id: 'memory-1',
+    type: 'action',
+    title: 'Mission Control avatars wired',
+    summary: 'Swapped placeholder initials for portrait art to boost operator trust.',
+    time: '06:58'
+  },
+  {
+    id: 'memory-2',
+    type: 'decision',
+    title: 'Task board owns sprint scope',
+    summary: 'All short-term directives funnel through Iris + Terrence so nothing drifts.',
+    time: '06:42'
+  },
+  {
+    id: 'memory-3',
+    type: 'thought',
+    title: 'Calendar widget stays lightweight',
+    summary: 'Preview just enough schedule data to prime the next sync.',
+    time: '06:20'
+  }
+]
+
+const CALENDAR_SCHEDULE = [
+  { id: 'cal-1', label: 'Ops stand-up', day: 'Mon', time: '09:00', color: 'calendar-blue', next: 'Mon • 09:00' },
+  { id: 'cal-2', label: 'Memory sweep', day: 'Tue', time: '14:00', color: 'calendar-purple', next: 'Tue • 14:00' },
+  { id: 'cal-3', label: 'Frontend polish', day: 'Wed', time: '11:00', color: 'calendar-pink', next: 'Wed • 11:00' },
+  { id: 'cal-4', label: 'Backend diagnostics', day: 'Thu', time: '16:00', color: 'calendar-green', next: 'Thu • 16:00' },
+  { id: 'cal-5', label: 'Sprint sync', day: 'Fri', time: '13:00', color: 'calendar-gold', next: 'Fri • 13:00' },
+  { id: 'cal-6', label: 'Ops stand-up', day: 'Thu', time: '09:00', color: 'calendar-blue' }
+]
+
+const safeParseJSON = (value, fallback = null) => {
+  if (typeof value !== 'string') return fallback
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
+}
+
+const getStoredTasks = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(TASKS_STORAGE_KEY)
+    const parsed = safeParseJSON(raw, null)
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+const persistTasks = tasks => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks))
+  } catch {
+    /* ignore */
+  }
+}
+
 
 const fetchJson = async path => {
   const response = await fetch(`${API_BASE}${path}`)
@@ -56,16 +188,14 @@ const DEFAULT_DIRECTIVES = [
 
 const NAV_SECTIONS = [
   { label: 'Dashboard', key: 'dashboard' },
-  { label: 'Agents', key: 'agents' },
-  { label: 'Logs', key: 'logs' },
-  { label: 'Missions', key: 'missions' }
+  { label: 'Tasks', key: 'tasks' }
 ]
 
 const AGENT_PROFILES = [
   {
     id: 'aster',
     name: 'Aster',
-    avatar: { icon: '▲', className: 'avatar-aster' },
+    avatar: avatarAster,
     focus: 'Routes missions, sets priorities',
     title: 'Front door strategist',
     traits: ['decisive', 'orchestrator', 'calm'],
@@ -79,7 +209,7 @@ const AGENT_PROFILES = [
   {
     id: 'nara',
     name: 'Nara',
-    avatar: { icon: '✦', className: 'avatar-nara' },
+    avatar: avatarNara,
     focus: 'Owns UX/frontline experience',
     title: 'Autonomous build siren',
     traits: ['seductive', 'cunning', 'financially wired'],
@@ -93,7 +223,7 @@ const AGENT_PROFILES = [
   {
     id: 'iris',
     name: 'Iris',
-    avatar: { icon: '🧪', className: 'avatar-iris' },
+    avatar: avatarIris,
     focus: 'Backend + integrations guardrail',
     title: 'Backend + integrations',
     traits: ['methodical', 'precise', 'observability-first'],
@@ -107,7 +237,7 @@ const AGENT_PROFILES = [
   {
     id: 'osiris',
     name: 'Osiris',
-    avatar: { icon: '✹', className: 'avatar-osiris' },
+    avatar: avatarOsiris,
     focus: 'Systems, memory, and lore',
     title: 'Systems + memory keeper',
     traits: ['archivist', 'stability', 'coordination'],
@@ -128,13 +258,19 @@ const buildInitialPersonaOverrides = () => {
   return initial
 }
 
-const HeaderNav = ({ sections }) => (
+const HeaderNav = ({ sections, activeView, onNavigate }) => (
   <header className="header-nav">
     <div className="nav-logo">🧭</div>
     <ul>
       {sections.map(section => (
         <li key={section.key}>
-          <a href={`#${section.key}`}>{section.label}</a>
+          <button
+            type="button"
+            className={activeView === section.key ? 'active' : ''}
+            onClick={() => onNavigate?.(section.key)}
+          >
+            {section.label}
+          </button>
         </li>
       ))}
     </ul>
@@ -187,8 +323,8 @@ const AgentCarousel = ({ agents, activeAgent, onSelect, routedAgent }) => {
         <button onClick={handleNext} aria-label="Next agent">→</button>
       </div>
       <div className="carousel-card">
-        <div className={`persona-avatar ${current.avatar?.className ?? ''}`}>
-          <span>{current.avatar?.icon || current.name[0]}</span>
+        <div className="persona-avatar">
+          <img src={current.avatar} alt={`${current.name} avatar`} />
         </div>
         <div className="persona-card-header">
           <h3>{current.name}</h3>
@@ -448,8 +584,17 @@ export default function App() {
   const [commandSearch, setCommandSearch] = useState('')
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
+  const [activeView, setActiveView] = useState('dashboard')
+  const [tasks, setTasks] = useState(() => getStoredTasks() ?? INITIAL_TASKS)
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
+  const boardOwners = useMemo(() => {
+    const unique = new Set(OWNER_SEQUENCE)
+    tasks.forEach(task => {
+      if (task.owner) unique.add(task.owner)
+    })
+    return Array.from(unique)
+  }, [tasks])
   const wsRef = useRef(null)
   const reconnectRef = useRef()
   const scrollRef = useRef()
@@ -575,9 +720,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!scrollRef.current) return
-    scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-  }, [messages])
+    persistTasks(tasks)
+  }, [tasks])
 
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return
@@ -647,6 +791,19 @@ export default function App() {
         time: msg.ts ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'
       }))
   }, [messages])
+
+  const opsFeedEntries = useMemo(() => {
+    const staged = queue.map(entry => ({
+      id: `queue-${entry.id}`,
+      title: entry.text,
+      route: entry.route,
+      status: entry.status,
+      duration: null,
+      time: 'just now',
+      sourceId: entry.id
+    }))
+    return [...staged, ...OPS_FEED_BASE]
+  }, [queue])
 
   const derivedTelemetry = useMemo(() => {
     const now = Date.now()
@@ -812,6 +969,67 @@ const handleEnterHub = () => setHasEntered(true)
       .then(() => setLastSeen(new Date().toLocaleTimeString()))
       .catch(() => {})
   }, [])
+
+  const getUpdateStamp = useCallback(
+    () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    []
+  )
+
+  const handleAddTask = useCallback(({ title, owner, description }) => {
+    const trimmedTitle = title?.trim()
+    if (!trimmedTitle) return
+    const trimmedDescription = description?.trim() || undefined
+    const resolvedOwner = OWNER_SEQUENCE.includes(owner) ? owner : OWNER_SEQUENCE[0]
+    setTasks(prev => [
+      {
+        id: crypto.randomUUID(),
+        title: trimmedTitle,
+        owner: resolvedOwner,
+        status: 'backlog',
+        description: trimmedDescription,
+        updatedAt: getUpdateStamp()
+      },
+      ...prev
+    ])
+  }, [getUpdateStamp])
+
+  const advanceTask = useCallback(id => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== id) return task
+      const currentIndex = STATUS_SEQUENCE.indexOf(task.status)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      if (safeIndex >= STATUS_SEQUENCE.length - 1) return task
+      const nextStatus = STATUS_SEQUENCE[safeIndex + 1]
+      if (!nextStatus) return task
+      return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
+    }))
+  }, [getUpdateStamp])
+
+  const rewindTask = useCallback(id => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== id) return task
+      const currentIndex = STATUS_SEQUENCE.indexOf(task.status)
+      const safeIndex = currentIndex === -1 ? 1 : currentIndex
+      if (safeIndex <= 0) return task
+      const nextStatus = STATUS_SEQUENCE[safeIndex - 1]
+      return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
+    }))
+  }, [getUpdateStamp])
+
+  const reassignTask = useCallback(id => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== id) return task
+      const currentIndex = OWNER_SEQUENCE.indexOf(task.owner)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      const nextOwner = OWNER_SEQUENCE[(safeIndex + 1) % OWNER_SEQUENCE.length]
+      return { ...task, owner: nextOwner, updatedAt: getUpdateStamp() }
+    }))
+  }, [getUpdateStamp])
+
+  const handleNavigate = useCallback(view => {
+    setActiveView(view === 'tasks' ? 'tasks' : 'dashboard')
+  }, [])
+
   const handlePersonaAdjust = (key, value) => {
     setPersonaOverrides(prev => {
       const current = prev[routePref] || []
@@ -823,8 +1041,10 @@ const handleEnterHub = () => setHasEntered(true)
   return (
     <div className={`app-shell ${hasEntered ? 'entered' : ''}`}>
       {!hasEntered && <LandingOverlay onEnter={handleEnterHub} />}
-      <HeaderNav sections={NAV_SECTIONS} />
-      <div className="shell-grid">
+      <HeaderNav sections={NAV_SECTIONS} activeView={activeView} onNavigate={handleNavigate} />
+      {activeView === 'dashboard' ? (
+        <>
+          <div className="shell-grid">
         <div className="mission-column">
           <div className="mission-stack">
             <DirectiveList directives={DEFAULT_DIRECTIVES} />
@@ -993,9 +1213,27 @@ const handleEnterHub = () => setHasEntered(true)
             </div>
           </div>
         </aside>
+          </div>
+          <section className="intel-grid">
+            <OpsFeed entries={opsFeedEntries} onComplete={handleCommandComplete} />
+            <MemoryStream entries={MEMORY_STREAM_ENTRIES} />
+            <CalendarPreview schedule={CALENDAR_SCHEDULE} />
+          </section>
+        </div>
       </div>
+        </>
+      ) : (
+        <TaskBoardPage
+          tasks={tasks}
+          owners={boardOwners}
+          onAddTask={handleAddTask}
+          onAdvance={advanceTask}
+          onRewind={rewindTask}
+          onReassign={reassignTask}
+          onBack={() => handleNavigate('dashboard')}
+        />
+      )}
     </div>
-    </div>
-  </div>
-)
+  )
 }
+
