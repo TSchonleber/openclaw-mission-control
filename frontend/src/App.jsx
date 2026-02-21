@@ -65,6 +65,8 @@ const AGENT_PROFILES = [
   {
     id: 'aster',
     name: 'Aster',
+    avatar: { icon: '▲', background: 'linear-gradient(135deg, #5d7cff, #70f9ff)' },
+    focus: 'Routes missions, sets priorities',
     title: 'Front door strategist',
     traits: ['decisive', 'orchestrator', 'calm'],
     summary: 'Routes work, keeps the crew aligned, and sets the next three moves.',
@@ -77,6 +79,8 @@ const AGENT_PROFILES = [
   {
     id: 'nara',
     name: 'Nara',
+    avatar: { icon: '✦', background: 'linear-gradient(135deg, #ff7ac6, #ffb86c)' },
+    focus: 'Owns UX/frontline experience',
     title: 'Autonomous build siren',
     traits: ['seductive', 'cunning', 'financially wired'],
     summary: 'Owns the whole UX/frontline experience and demands reliable contracts.',
@@ -89,6 +93,8 @@ const AGENT_PROFILES = [
   {
     id: 'iris',
     name: 'Iris',
+    avatar: { icon: '🧪', background: 'linear-gradient(135deg, #20d3ff, #7af7d5)' },
+    focus: 'Backend + integrations guardrail',
     title: 'Backend + integrations',
     traits: ['methodical', 'precise', 'observability-first'],
     summary: 'Keeps every service boring, debuggable, and wired into the rest of the stack.',
@@ -101,6 +107,8 @@ const AGENT_PROFILES = [
   {
     id: 'osiris',
     name: 'Osiris',
+    avatar: { icon: '✹', background: 'linear-gradient(135deg, #b287ff, #ff9cf3)' },
+    focus: 'Systems, memory, and lore',
     title: 'Systems + memory keeper',
     traits: ['archivist', 'stability', 'coordination'],
     summary: 'Documents, curates, and keeps the team’s long-term memory sharp.',
@@ -144,7 +152,7 @@ const LandingOverlay = ({ onEnter }) => (
   </div>
 )
 
-const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
+const AgentCarousel = ({ agents, activeAgent, onSelect, routedAgent }) => {
   const [index, setIndex] = useState(() => Math.max(0, agents.findIndex(agent => agent.id === activeAgent)))
 
   useEffect(() => {
@@ -169,6 +177,7 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
   }, [shift])
 
   const current = agents[index] || agents[0]
+  const isRouted = current.id === routedAgent
 
   return (
     <div className="agent-carousel">
@@ -178,10 +187,16 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
         <button onClick={handleNext} aria-label="Next agent">→</button>
       </div>
       <div className="carousel-card">
-        <div className="persona-avatar">{current.name[0]}</div>
-        <h3>{current.name}</h3>
-        <p>{current.title}</p>
+        <div className="persona-avatar" style={{ background: current.avatar?.background }}>
+          <span>{current.avatar?.icon || current.name[0]}</span>
+        </div>
+        <div className="persona-card-header">
+          <h3>{current.name}</h3>
+          {isRouted && <span className="pill subtle">Routed</span>}
+        </div>
+        <p className="persona-role">{current.title}</p>
         <small>{current.summary}</small>
+        {current.focus && <p className="persona-focus">{current.focus}</p>}
         <div className="persona-tags">
           {current.traits.map(trait => (
             <span key={trait}>{trait}</span>
@@ -317,10 +332,14 @@ const DirectiveList = ({ directives }) => (
   </div>
 )
 
-const PersonaTuner = ({ personaState, onAdjust }) => (
+const PersonaTuner = ({ personaState, agentId, onAdjust }) => (
   <div className="list-card persona-tuner">
-    <h4>Persona tuning</h4>
+    <div className="persona-tuner-header">
+      <h4>Persona tuning</h4>
+      {agentId && <span className="pill subtle">{agentId}</span>}
+    </div>
     <div className="tuner-grid">
+      {personaState.length === 0 && <p className="empty-text">No controls yet.</p>}
       {personaState.map(control => (
         <label key={control.key}>
           <span>{control.label}</span>
@@ -389,9 +408,7 @@ export default function App() {
   const [queue, setQueue] = useState([])
   const [lastSeen, setLastSeen] = useState(null)
   const [newCommand, setNewCommand] = useState('')
-  const [personaProfile, setPersonaProfile] = useState(AGENT_PROFILES[1])
   const [personaOverrides, setPersonaOverrides] = useState(buildInitialPersonaOverrides)
-  const [personaControls, setPersonaControls] = useState(() => personaOverrides['nara'])
   const [telemetryFeed, setTelemetryFeed] = useState(null)
   const [telemetryError, setTelemetryError] = useState(null)
   const [commandLog, dispatchCommandLog] = useReducer(commandLogReducer, [])
@@ -402,6 +419,7 @@ export default function App() {
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
 
+  const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const wsRef = useRef(null)
   const reconnectRef = useRef()
   const scrollRef = useRef()
@@ -765,7 +783,11 @@ const handleEnterHub = () => setHasEntered(true)
       .catch(() => {})
   }, [])
   const handlePersonaAdjust = (key, value) => {
-    setPersonaControls(prev => prev.map(control => (control.key === key ? { ...control, value } : control)))
+    setPersonaOverrides(prev => {
+      const current = prev[routePref] || []
+      const updated = current.map(control => (control.key === key ? { ...control, value } : control))
+      return { ...prev, [routePref]: updated }
+    })
   }
 
   return (
@@ -924,14 +946,14 @@ const handleEnterHub = () => setHasEntered(true)
             <h2>Agent capsule</h2>
             <p>Persona tuning plus latest field signals.</p>
           </div>
-          <AgentCarousel agents={AGENT_PROFILES} activeAgent={carouselAgent} onSelect={updateRoutePref} />
+          <AgentCarousel agents={AGENT_PROFILES} activeAgent={carouselAgent} routedAgent={routePref} onSelect={setCarouselAgent} />
           <div className="stack-hero" style={{ backgroundImage: `url(${heroHall})` }}>
             <div>
               <p className="eyebrow">Ops corridor</p>
               <strong>All systems awaiting directives</strong>
             </div>
           </div>
-          <PersonaTuner personaState={personaControls} onAdjust={handlePersonaAdjust} />
+          <PersonaTuner personaState={personaState} agentId={routePref} onAdjust={handlePersonaAdjust} />
           <div className="list-card">
             <h4>Recent activity</h4>
             <div className="activity-list">

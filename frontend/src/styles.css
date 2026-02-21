@@ -572,14 +572,19 @@ textarea:focus {
 }
 
 .persona-avatar {
-  width: 68px;
-  height: 68px;
-  border-radius: 20px;
-  background: linear-gradient(145deg, #5a5bff, #7b9dff);
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
   display: grid;
   place-items: center;
+  font-size: 1.6rem;
+  color: #05070d;
   font-weight: 600;
-  font-size: 1.4rem;
+  box-shadow: 0 15px 45px rgba(0,0,0,0.4);
+}
+
+.persona-avatar span {
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.35));
 }
 
 .persona-details h3 {
@@ -1248,3 +1253,34 @@ textarea:focus {
   margin-bottom: 16px;
 }
 
+
+.persona-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.persona-role {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.persona-focus {
+  margin: 4px 0 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.persona-tuner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.persona-tuner .empty-text {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
