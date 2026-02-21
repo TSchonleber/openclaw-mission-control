@@ -246,12 +246,42 @@ const ConnectionPill = ({ status }) => {
   return <span className={`connection-pill ${state.cls}`}>{state.text}</span>
 }
 
+
+
+const normalizeMessageContent = (text) => {
+  if (typeof text !== 'string') return ['']
+  const normalized = text
+    .replace(/```([\s\S]*?)```/g, (_, code) => `\n${code.trim()}\n`)
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/~{2}(.*?)~{2}/g, '$1')
+    .replace(/^-{3,}$/gm, '')
+    .replace(/\r/g, '')
+    .replace(/\n-\s+/g, '\n• ')
+    .replace(/\n>/g, '\n')
+  return normalized
+    .split(/\n{2,}/)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+}
+
 const MessageBubble = ({ message }) => {
   const { role, content, ts, route, model, meta } = message
   const timestamp = ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+  const segments = useMemo(() => normalizeMessageContent(content), [content])
   return (
     <div className={`message ${role}`}>
-      <div className="message-content">{content}</div>
+      <div className="message-content">
+        {segments.length > 0 ? (
+          segments.map((segment, index) => (
+            <p key={`${message.id || index}-segment-${index}`}>{segment}</p>
+          ))
+        ) : (
+          <p>{content}</p>
+        )}
+      </div>
       <div className="message-meta">
         {route && <span className="badge route">{route}</span>}
         {model && <span className="badge">{model}</span>}
