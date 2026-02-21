@@ -6,20 +6,8 @@ import CommandLogPanel from './components/CommandLogPanel'
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
 const fallbackPort = protocol === 'wss' ? 443 : 8000
-const DEFAULT_BACKEND_BASE = import.meta.env.VITE_API_BASE_URL || 'https://nara-hub-backend.onrender.com'
 const getWsUrl = () => {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
-  if (DEFAULT_BACKEND_BASE) {
-    try {
-      const wsBase = new URL(DEFAULT_BACKEND_BASE)
-      wsBase.protocol = wsBase.protocol === 'https:' ? 'wss:' : 'ws:'
-      wsBase.pathname = '/ws'
-      return wsBase.toString()
-    } catch (err) {
-      console.warn('Invalid DEFAULT_BACKEND_BASE', err)
-    }
-  }
-  if (typeof window === 'undefined') return 'ws://localhost:8000/ws'
   const port = import.meta.env.VITE_WS_PORT || (window.location.protocol === 'https:' ? 443 : 8000)
   const url = new URL(window.location.origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -29,7 +17,7 @@ const getWsUrl = () => {
 }
 
 const DEFAULT_WS = getWsUrl()
-const API_BASE = DEFAULT_BACKEND_BASE
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
