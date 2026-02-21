@@ -13,15 +13,23 @@ import logging
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocketState
 
 from codex_router import CodexRouter
 from command_log import CommandLog, CommandEntry
 from telemetry import TelemetryTracker
+from task_service import (
+    OWNER_SEQUENCE,
+    STATUS_SEQUENCE,
+    TaskCreateRequest,
+    TaskRepository,
+    TaskResponse,
+    TaskUpdateRequest,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -37,6 +45,7 @@ app.add_middleware(
 telemetry_tracker = TelemetryTracker(window_minutes=30)
 command_log = CommandLog(max_entries=100)
 router = CodexRouter(telemetry_hook=telemetry_tracker.record)
+tasks_repo = TaskRepository()
 ACTIVE_CONNECTIONS: set[WebSocket] = set()
 
 
@@ -67,6 +76,83 @@ def telemetry_snapshot() -> Dict[str, Any]:
 def command_log_snapshot(limit: int = 100) -> Dict[str, Any]:
     entries = command_log.snapshot(limit=limit)
     return {"entries": entries, "ts": _now_iso()}
+
+
+@app.get("/mission/tasks", response_model=list[TaskResponse])
+async def mission_tasks(
+    owner: Optional[str] = Query(default=None),
+    task_status: Optional[str] = Query(default=None, alias="status"),
+    search: Optional[str] = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> List[TaskResponse]:
+    normalized_owner = _normalize_owner(owner)
+    normalized_status = _normalize_status(task_status)
+    records = tasks_repo.list_tasks(
+        owner=normalized_owner,
+        status=normalized_status,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+    return [record.to_response() for record in records]
+
+
+@app.post("/mission/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+async def create_mission_task(payload: TaskCreateRequest) -> TaskResponse:
+    record = tasks_repo.create_task(payload)
+    response = record.to_response()
+    await _broadcast_task_event("created", response)
+    return response
+
+
+@app.patch("/mission/tasks/{task_id}", response_model=TaskResponse)
+async def update_mission_task(task_id: str, payload: TaskUpdateRequest) -> TaskResponse:
+    record = tasks_repo.update_task(task_id, payload)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    response = record.to_response()
+    await _broadcast_task_event("updated", response)
+    return response
+
+
+@app.post("/mission/tasks/{task_id}/advance", response_model=TaskResponse)
+async def advance_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    idx = STATUS_SEQUENCE.index(current.status)
+    if idx >= len(STATUS_SEQUENCE) - 1:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already done")
+    record = tasks_repo.advance(task_id)
+    response = record.to_response()
+    await _broadcast_task_event("updated", response)
+    return response
+
+
+@app.post("/mission/tasks/{task_id}/rewind", response_model=TaskResponse)
+async def rewind_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    idx = STATUS_SEQUENCE.index(current.status)
+    if idx <= 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already in backlog")
+    record = tasks_repo.rewind(task_id)
+    response = record.to_response()
+    await _broadcast_task_event("updated", response)
+    return response
+
+
+@app.post("/mission/tasks/{task_id}/reassign", response_model=TaskResponse)
+async def reassign_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    record = tasks_repo.reassign(task_id)
+    response = record.to_response()
+    await _broadcast_task_event("updated", response)
+    return response
 
 
 @app.websocket("/ws")
@@ -190,6 +276,12 @@ async def _broadcast_telemetry() -> None:
     await _broadcast(_telemetry_payload())
 
 
+async def _broadcast_task_event(event: str, task: TaskResponse) -> None:
+    await _broadcast(
+        {"type": "task_event", "event": event, "task": task.dict(by_alias=True)}
+    )
+
+
 def _telemetry_payload() -> Dict[str, Any]:
     return {
         "type": "telemetry",
@@ -210,6 +302,26 @@ async def _broadcast(message: Dict[str, Any]) -> None:
             dead.append(client)
     for client in dead:
         ACTIVE_CONNECTIONS.discard(client)
+
+
+def _normalize_owner(owner: Optional[str]) -> Optional[str]:
+    if owner is None:
+        return None
+    match = next((value for value in OWNER_SEQUENCE if value.lower() == owner.lower()), None)
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown owner")
+    return match
+
+
+def _normalize_status(task_status: Optional[str]) -> Optional[str]:
+    if task_status is None:
+        return None
+    match = next(
+        (value for value in STATUS_SEQUENCE if value.lower() == task_status.lower()), None
+    )
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unknown status")
+    return match
 
 
 def _coerce_payload(raw: str) -> Dict[str, Any]:
