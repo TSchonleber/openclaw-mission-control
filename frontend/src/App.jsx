@@ -65,7 +65,7 @@ const AGENT_PROFILES = [
   {
     id: 'aster',
     name: 'Aster',
-    avatar: { icon: '▲', background: 'linear-gradient(135deg, #5d7cff, #70f9ff)' },
+    avatar: { icon: '▲', className: 'avatar-aster' },
     focus: 'Routes missions, sets priorities',
     title: 'Front door strategist',
     traits: ['decisive', 'orchestrator', 'calm'],
@@ -79,7 +79,7 @@ const AGENT_PROFILES = [
   {
     id: 'nara',
     name: 'Nara',
-    avatar: { icon: '✦', background: 'linear-gradient(135deg, #ff7ac6, #ffb86c)' },
+    avatar: { icon: '✦', className: 'avatar-nara' },
     focus: 'Owns UX/frontline experience',
     title: 'Autonomous build siren',
     traits: ['seductive', 'cunning', 'financially wired'],
@@ -93,7 +93,7 @@ const AGENT_PROFILES = [
   {
     id: 'iris',
     name: 'Iris',
-    avatar: { icon: '🧪', background: 'linear-gradient(135deg, #20d3ff, #7af7d5)' },
+    avatar: { icon: '🧪', className: 'avatar-iris' },
     focus: 'Backend + integrations guardrail',
     title: 'Backend + integrations',
     traits: ['methodical', 'precise', 'observability-first'],
@@ -107,7 +107,7 @@ const AGENT_PROFILES = [
   {
     id: 'osiris',
     name: 'Osiris',
-    avatar: { icon: '✹', background: 'linear-gradient(135deg, #b287ff, #ff9cf3)' },
+    avatar: { icon: '✹', className: 'avatar-osiris' },
     focus: 'Systems, memory, and lore',
     title: 'Systems + memory keeper',
     traits: ['archivist', 'stability', 'coordination'],
@@ -187,7 +187,7 @@ const AgentCarousel = ({ agents, activeAgent, onSelect, routedAgent }) => {
         <button onClick={handleNext} aria-label="Next agent">→</button>
       </div>
       <div className="carousel-card">
-        <div className="persona-avatar" style={{ background: current.avatar?.background }}>
+        <div className={`persona-avatar ${current.avatar?.className ?? ''}`}>
           <span>{current.avatar?.icon || current.name[0]}</span>
         </div>
         <div className="persona-card-header">

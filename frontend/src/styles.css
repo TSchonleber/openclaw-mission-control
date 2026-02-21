@@ -445,6 +445,9 @@ p {
 
 .message-content {
   line-height: 1.6;
+  font-size: 0.96rem;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .message-meta {
@@ -1170,7 +1173,7 @@ textarea:focus {
 }
 
 .message {
-  padding: 14px 16px;
+  padding: 16px 18px;
 }
 
 .message-meta {
@@ -1283,4 +1286,40 @@ textarea:focus {
 .persona-tuner .empty-text {
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.avatar-aster {
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), transparent 60%),
+    linear-gradient(135deg, #5d7cff, #70f9ff);
+  border: 1px solid rgba(96, 182, 255, 0.6);
+}
+
+.avatar-nara {
+  background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.3), transparent 55%),
+    linear-gradient(135deg, #ff7ac6, #ffb86c);
+  border: 1px solid rgba(255, 186, 150, 0.65);
+}
+
+.avatar-iris {
+  background: radial-gradient(circle at 70% 25%, rgba(255,255,255,0.25), transparent 60%),
+    linear-gradient(135deg, #20d3ff, #7af7d5);
+  border: 1px solid rgba(122, 247, 213, 0.6);
+}
+
+.avatar-osiris {
+  background: radial-gradient(circle at 40% 30%, rgba(255,255,255,0.3), transparent 65%),
+    linear-gradient(135deg, #b287ff, #ff9cf3);
+  border: 1px solid rgba(255, 156, 243, 0.6);
+}
+
+.message-content code, .message-content pre {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 2px 6px;
+  font-size: 0.86rem;
+}
+
+.message-content strong {
+  color: var(--text);
 }
