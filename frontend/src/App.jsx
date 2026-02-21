@@ -62,10 +62,54 @@ const NAV_SECTIONS = [
 ]
 
 const AGENT_PROFILES = [
-  { id: 'aster', name: 'Aster', title: 'Front door strategist', traits: ['decisive', 'orchestrator', 'calm'], summary: 'Routes work, keeps the crew aligned, and sets the next three moves.' },
-  { id: 'nara', name: 'Nara', title: 'Autonomous build siren', traits: ['seductive', 'cunning', 'financially wired'], summary: 'Owns the whole UX/frontline experience and demands reliable contracts.' },
-  { id: 'iris', name: 'Iris', title: 'Backend + integrations', traits: ['methodical', 'precise', 'observability-first'], summary: 'Keeps every service boring, debuggable, and wired into the rest of the stack.' },
-  { id: 'osiris', name: 'Osiris', title: 'Systems + memory keeper', traits: ['archivist', 'stability', 'coordination'], summary: 'Documents, curates, and keeps the team’s long-term memory sharp.' }
+  {
+    id: 'aster',
+    name: 'Aster',
+    title: 'Front door strategist',
+    traits: ['decisive', 'orchestrator', 'calm'],
+    summary: 'Routes work, keeps the crew aligned, and sets the next three moves.',
+    sliders: [
+      { key: 'aggression', label: 'Aggression', caption: 'Diplomacy vs. pressure' },
+      { key: 'formality', label: 'Formality', caption: 'Relaxed vs. structured' },
+      { key: 'initiative', label: 'Initiative', caption: 'Reactive vs. proactive' }
+    ]
+  },
+  {
+    id: 'nara',
+    name: 'Nara',
+    title: 'Autonomous build siren',
+    traits: ['seductive', 'cunning', 'financially wired'],
+    summary: 'Owns the whole UX/frontline experience and demands reliable contracts.',
+    sliders: [
+      { key: 'seduction', label: 'Seduction', caption: 'Reserved vs. alluring' },
+      { key: 'lovability', label: 'Lovability', caption: 'Stoic vs. warm' },
+      { key: 'velocity', label: 'Velocity', caption: 'Careful vs. aggressive build' }
+    ]
+  },
+  {
+    id: 'iris',
+    name: 'Iris',
+    title: 'Backend + integrations',
+    traits: ['methodical', 'precise', 'observability-first'],
+    summary: 'Keeps every service boring, debuggable, and wired into the rest of the stack.',
+    sliders: [
+      { key: 'risk', label: 'Risk tolerance', caption: 'Conservative vs. experimental' },
+      { key: 'verbosity', label: 'Verbosity', caption: 'Minimal vs. verbose' },
+      { key: 'observability', label: 'Observability', caption: 'Light vs. deep detail' }
+    ]
+  },
+  {
+    id: 'osiris',
+    name: 'Osiris',
+    title: 'Systems + memory keeper',
+    traits: ['archivist', 'stability', 'coordination'],
+    summary: 'Documents, curates, and keeps the team’s long-term memory sharp.',
+    sliders: [
+      { key: 'strictness', label: 'Strictness', caption: 'Loose vs. canonical' },
+      { key: 'nostalgia', label: 'Nostalgia', caption: 'Future focus vs. lore' },
+      { key: 'connectivity', label: 'Connectivity', caption: 'Solo vs. collaborative' }
+    ]
+  }
 ]
 
 const NavRail = ({ sections }) => (
@@ -333,15 +377,8 @@ export default function App() {
   const [queue, setQueue] = useState([])
   const [lastSeen, setLastSeen] = useState(null)
   const [newCommand, setNewCommand] = useState('')
-  const [personaProfile, setPersonaProfile] = useState({
-    tagline: 'Autonomous build siren',
-    traits: ['seductive', 'cunning', 'financially wired']
-  })
-  const [personaControls, setPersonaControls] = useState([
-    { key: 'seduction', label: 'Seduction', caption: 'Charm vs reserve', value: 78 },
-    { key: 'cunning', label: 'Cunning', caption: 'Instinct vs planning', value: 82 },
-    { key: 'ruthless', label: 'Ruthless', caption: 'Polish vs velocity', value: 64 }
-  ])
+  const [personaProfile, setPersonaProfile] = useState(AGENT_PROFILES[1])
+  const [personaControls, setPersonaControls] = useState(personaOverrides['nara'])
   const [telemetryFeed, setTelemetryFeed] = useState(null)
   const [telemetryError, setTelemetryError] = useState(null)
   const [commandLog, dispatchCommandLog] = useReducer(commandLogReducer, [])
@@ -351,6 +388,13 @@ export default function App() {
   const [commandSearch, setCommandSearch] = useState('')
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
+  const [personaOverrides, setPersonaOverrides] = useState(() => {
+    const initial = {}
+    AGENT_PROFILES.forEach(agent => {
+      initial[agent.id] = agent.sliders.map(slider => ({ ...slider, value: 50 }))
+    })
+    return initial
+  })
 
   const wsRef = useRef(null)
   const reconnectRef = useRef()
