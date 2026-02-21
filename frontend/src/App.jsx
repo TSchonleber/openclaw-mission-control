@@ -112,6 +112,14 @@ const AGENT_PROFILES = [
   }
 ]
 
+const buildInitialPersonaOverrides = () => {
+  const initial = {}
+  AGENT_PROFILES.forEach(agent => {
+    initial[agent.id] = agent.sliders.map(slider => ({ ...slider, value: 50 }))
+  })
+  return initial
+}
+
 const NavRail = ({ sections }) => (
   <nav className="nav-rail">
     <div className="nav-logo">🧭</div>
@@ -378,7 +386,8 @@ export default function App() {
   const [lastSeen, setLastSeen] = useState(null)
   const [newCommand, setNewCommand] = useState('')
   const [personaProfile, setPersonaProfile] = useState(AGENT_PROFILES[1])
-  const [personaControls, setPersonaControls] = useState(personaOverrides['nara'])
+  const [personaOverrides, setPersonaOverrides] = useState(buildInitialPersonaOverrides)
+  const [personaControls, setPersonaControls] = useState(() => personaOverrides['nara'])
   const [telemetryFeed, setTelemetryFeed] = useState(null)
   const [telemetryError, setTelemetryError] = useState(null)
   const [commandLog, dispatchCommandLog] = useReducer(commandLogReducer, [])
@@ -388,13 +397,6 @@ export default function App() {
   const [commandSearch, setCommandSearch] = useState('')
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
-  const [personaOverrides, setPersonaOverrides] = useState(() => {
-    const initial = {}
-    AGENT_PROFILES.forEach(agent => {
-      initial[agent.id] = agent.sliders.map(slider => ({ ...slider, value: 50 }))
-    })
-    return initial
-  })
 
   const wsRef = useRef(null)
   const reconnectRef = useRef()
