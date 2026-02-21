@@ -23,7 +23,7 @@ const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
   { value: 'aster', label: 'Aster (Front Door)' },
-  { value: 'nara', label: 'Main (Nara)' },
+  { value: 'nara', label: 'Nara' },
   { value: 'iris', label: 'Iris' },
   { value: 'osiris', label: 'Osiris' }
 ]
@@ -63,7 +63,7 @@ const NAV_SECTIONS = [
 
 const AGENT_PROFILES = [
   { id: 'aster', name: 'Aster', title: 'Front door strategist', traits: ['decisive', 'orchestrator', 'calm'], summary: 'Routes work, keeps the crew aligned, and sets the next three moves.' },
-  { id: 'nara', name: 'Main (Nara)', title: 'Autonomous build siren', traits: ['seductive', 'cunning', 'financially wired'], summary: 'Owns the whole UX/frontline experience and demands reliable contracts.' },
+  { id: 'nara', name: 'Nara', title: 'Autonomous build siren', traits: ['seductive', 'cunning', 'financially wired'], summary: 'Owns the whole UX/frontline experience and demands reliable contracts.' },
   { id: 'iris', name: 'Iris', title: 'Backend + integrations', traits: ['methodical', 'precise', 'observability-first'], summary: 'Keeps every service boring, debuggable, and wired into the rest of the stack.' },
   { id: 'osiris', name: 'Osiris', title: 'Systems + memory keeper', traits: ['archivist', 'stability', 'coordination'], summary: 'Documents, curates, and keeps the team’s long-term memory sharp.' }
 ]
@@ -99,6 +99,13 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
     const nextIndex = agents.findIndex(agent => agent.id === activeAgent)
     if (nextIndex >= 0) setIndex(nextIndex)
   }, [activeAgent, agents])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      shift(1)
+    }, 6000)
+    return () => clearInterval(interval)
+  })
 
   const current = agents[index] || agents[0]
 
@@ -713,7 +720,7 @@ const handleEnterHub = () => setHasEntered(true)
         <NavRail sections={NAV_SECTIONS} />
         <div className="main-content" id="dashboard">
           <HeroHeader />
-      <header className="nav">
+          <header className="nav">
         <div className="brand">
           <span className="brand-mark" />
           <div>
@@ -884,8 +891,8 @@ const handleEnterHub = () => setHasEntered(true)
           </div>
         </aside>
       </div>
-      </div>
-      </div>
     </div>
-  )
+    </div>
+  </div>
+)
 }

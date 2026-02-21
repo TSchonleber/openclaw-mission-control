@@ -1153,3 +1153,38 @@ textarea:focus {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+.layout {
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.messages-scroll {
+  padding: 18px 24px 0;
+  gap: 12px;
+}
+
+.message {
+  padding: 12px 14px;
+  border-radius: 18px;
+}
+
+.stack-panel .panel-header {
+  padding-bottom: 16px;
+}
+
+.list-card,
+.command-form,
+.command-log-panel,
+.persona-tuner {
+  margin-bottom: 16px;
+}
+
+.nav-rail ul li a {
+  font-size: 0.85rem;
+}
