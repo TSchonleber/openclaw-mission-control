@@ -100,20 +100,20 @@ const AgentCarousel = ({ agents, activeAgent, onSelect }) => {
     if (nextIndex >= 0) setIndex(nextIndex)
   }, [activeAgent, agents])
 
+  const shift = useCallback((delta = 1) => {
+    setIndex(prev => {
+      const next = (prev + delta + agents.length) % agents.length
+      onSelect?.(agents[next].id)
+      return next
+    })
+  }, [agents, onSelect])
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      shift(1)
-    }, 6000)
+    const interval = setInterval(() => shift(1), 6000)
     return () => clearInterval(interval)
-  })
+  }, [shift])
 
   const current = agents[index] || agents[0]
-
-  const shift = delta => {
-    const next = (index + delta + agents.length) % agents.length
-    setIndex(next)
-    onSelect?.(agents[next].id)
-  }
 
   return (
     <div className="agent-carousel">
