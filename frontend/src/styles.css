@@ -1883,3 +1883,26 @@ button.ghost:hover {
 .ops-feed-row .log-meta span:last-child {
   margin-left: auto;
 }
+
+@media (max-width: 640px) {
+  .ops-feed-list {
+    padding: 0 16px 18px;
+    gap: 10px;
+  }
+
+  .ops-feed-row {
+    flex-direction: column;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .ops-feed-row .log-meta {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .ops-feed-row .log-meta span:last-child {
+    margin-left: 0;
+  }
+}
