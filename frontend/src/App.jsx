@@ -20,6 +20,7 @@ import {
   CALENDAR_DAYS,
   getScheduleColorClass
 } from './config/scheduleConstants'
+import { listSchedule, createScheduleItem } from './api/schedule'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -645,6 +646,9 @@ export default function App() {
   const [activeView, setActiveView] = useState('dashboard')
   const [tasks, setTasks] = useState(() => getStoredTasks() ?? INITIAL_TASKS)
   const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
+  const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true'
+  const [scheduleError, setScheduleError] = useState(null)
+  const [scheduleLoading, setScheduleLoading] = useState(useScheduleApi)
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
@@ -785,6 +789,31 @@ export default function App() {
   useEffect(() => {
     persistSchedule(schedule)
   }, [schedule])
+
+  useEffect(() => {
+    if (!useScheduleApi) return undefined
+    let ignore = false
+    setScheduleLoading(true)
+    listSchedule()
+      .then(items => {
+        if (ignore) return
+        if (Array.isArray(items) && items.length) {
+          setSchedule(items)
+          setScheduleError(null)
+        }
+      })
+      .catch(error => {
+        if (!ignore) {
+          setScheduleError(error.message)
+        }
+      })
+      .finally(() => {
+        if (!ignore) setScheduleLoading(false)
+      })
+    return () => {
+      ignore = true
+    }
+  }, [useScheduleApi])
 
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return
@@ -1103,8 +1132,22 @@ const handleEnterHub = () => setHasEntered(true)
       createdBy: 'Iris',
       createdAt: new Date().toISOString()
     }
+
+    if (useScheduleApi) {
+      createScheduleItem(entry)
+        .then(serverItem => {
+          setSchedule(prev => [serverItem ?? entry, ...prev])
+          setScheduleError(null)
+        })
+        .catch(error => {
+          setScheduleError(error.message)
+          setSchedule(prev => [entry, ...prev])
+        })
+      return
+    }
+
     setSchedule(prev => [entry, ...prev])
-  }, [])
+  }, [useScheduleApi])
 
   const advanceTask = useCallback(id => {
     setTasks(prev => prev.map(task => {
