@@ -1,5 +1,5 @@
 import React from 'react'
-import { getOwnerClass, getStatusLabel } from '../config/taskConstants'
+import { getOwnerClass, getStatusLabel, getSlaMeta } from '../config/taskConstants'
 import { formatUpdatedLabel } from '../utils/time'
 
 const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => {
@@ -7,17 +7,31 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => {
   const statusCopy = getStatusLabel(task.status)
   const updatedLabel = formatUpdatedLabel(task.updatedAt)
   const isBlocker = Boolean(task.blocker || task.blockerFlag)
-  const hasSla = typeof task.slaMinutes === 'number' && task.slaMinutes > 0
+  const slaMeta = getSlaMeta(task)
+  const hasSla = Boolean(slaMeta.slaMinutes)
+  const remainingLabel = slaMeta.remainingMinutes != null
+    ? `${Math.max(0, Math.round(slaMeta.remainingMinutes))}m left`
+    : null
+
+  const cardClass = `task-card sla-${slaMeta.slaStatus || 'ok'}`
 
   return (
-    <article className="task-card">
+    <article className={cardClass}>
       <header>
         <div className="task-card-title">
           <strong>{task.title}</strong>
           <div className="task-flags">
             <span className={`status-pill status-${task.status}`}>{statusCopy}</span>
-            {isBlocker && <span className="pill blocker">Blocker</span>}
-            {hasSla && <span className="pill sla">SLA {task.slaMinutes}m</span>}
+            {isBlocker && (
+              <span className="pill blocker" title={task.blockerReason || 'Flagged as blocker'}>
+                Blocker
+              </span>
+            )}
+            {hasSla && (
+              <span className={`pill sla sla-${slaMeta.slaStatus}`} title={remainingLabel ?? 'SLA active'}>
+                SLA {remainingLabel ?? `${slaMeta.slaMinutes}m`}
+              </span>
+            )}
           </div>
         </div>
         <span className={`owner-pill ${ownerClass}`}>{task.owner}</span>

@@ -325,6 +325,18 @@ p {
   background: rgba(32, 211, 255, 0.08);
 }
 
+.pill.sla.sla-warn {
+  color: var(--warn);
+  border-color: rgba(255, 180, 84, 0.6);
+  background: rgba(255, 180, 84, 0.1);
+}
+
+.pill.sla.sla-breach {
+  color: var(--danger);
+  border-color: rgba(255, 95, 130, 0.7);
+  background: rgba(255, 95, 130, 0.12);
+}
+
 .pill.online,
 .pill.good {
   color: var(--success);
@@ -1572,6 +1584,16 @@ button.ghost {
   opacity: 0.8;
 }
 
+.task-pill-group.risk .task-pill:first-child {
+  border-color: rgba(255, 95, 130, 0.6);
+  color: var(--danger);
+}
+
+.task-pill-group.risk .task-pill:last-child {
+  border-color: rgba(255, 180, 84, 0.6);
+  color: var(--warn);
+}
+
 .task-pill {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
@@ -1705,6 +1727,17 @@ button.ghost:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-card.sla-warn {
+  border-color: rgba(255, 180, 84, 0.6);
+  box-shadow: 0 0 12px rgba(255, 180, 84, 0.25);
+}
+
+.task-card.sla-breach {
+  border-color: rgba(255, 95, 130, 0.7);
+  box-shadow: 0 0 16px rgba(255, 95, 130, 0.35);
 }
 
 .task-card header {

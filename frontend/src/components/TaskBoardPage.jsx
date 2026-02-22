@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import TaskColumn from './TaskColumn'
 import TaskComposer from './TaskComposer'
 import TaskFilters from './TaskFilters'
-import { TASK_COLUMNS } from '../config/taskConstants'
+import { TASK_COLUMNS, getSlaMeta } from '../config/taskConstants'
 
 const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassign, onBack }) => {
   const ownerOptions = useMemo(() => (owners?.length ? owners : ['Iris', 'Terrence', 'Aster', 'Osiris']), [owners])
@@ -34,6 +34,12 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
     }))
   }, [ownerOptions, tasks])
 
+  const blockedCount = useMemo(() => filteredTasks.filter(task => task.blockerFlag || task.blocker).length, [filteredTasks])
+  const atRiskCount = useMemo(() => filteredTasks.filter(task => {
+    const meta = getSlaMeta(task)
+    return meta.slaStatus === 'warn' || meta.slaStatus === 'breach'
+  }).length, [filteredTasks])
+
   return (
     <div className="task-board-page">
       <header className="task-board-header">
@@ -57,6 +63,14 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
               <strong>{stat.count}</strong> {stat.owner}
             </span>
           ))}
+        </div>
+        <div className="task-pill-group risk">
+          <span className="task-pill">
+            <strong>{blockedCount}</strong> Blocked
+          </span>
+          <span className="task-pill">
+            <strong>{atRiskCount}</strong> At risk
+          </span>
         </div>
       </div>
       <TaskComposer owners={ownerOptions} onAdd={onAddTask} />

@@ -11,7 +11,7 @@ import avatarAster from './assets/avatars/aster.jpg'
 import avatarNara from './assets/avatars/nara.jpg'
 import avatarIris from './assets/avatars/iris.jpg'
 import avatarOsiris from './assets/avatars/osiris.jpg'
-import { OWNER_SEQUENCE, STATUS_SEQUENCE } from './config/taskConstants'
+import { OWNER_SEQUENCE, STATUS_SEQUENCE, getSlaMeta, getDefaultSlaMinutes } from './config/taskConstants'
 import {
   INITIAL_SCHEDULE,
   CALENDAR_STORAGE_KEY,
@@ -104,7 +104,7 @@ const INITIAL_TASKS = [
     owner: 'Iris',
     status: 'review',
     description: 'Import portrait art + wire carousel badges before shipping Mission Control.',
-    slaMinutes: 90,
+    slaMinutes: getDefaultSlaMinutes('review'),
     createdAt: minutesAgo(240),
     updatedAt: minutesAgo(60)
   },
@@ -114,6 +114,7 @@ const INITIAL_TASKS = [
     owner: 'Terrence',
     status: 'in-progress',
     description: 'Ensure Ops Feed, Memory Stream, and Calendar render clean placeholder data.',
+    slaMinutes: getDefaultSlaMinutes('in-progress'),
     createdAt: minutesAgo(180),
     updatedAt: minutesAgo(28)
   },
@@ -123,7 +124,9 @@ const INITIAL_TASKS = [
     owner: 'Nara',
     status: 'in-progress',
     description: 'Map hover/focus states + microcopy so Mission Control stays seductive.',
-    blocker: true,
+    blockerFlag: true,
+    blockerReason: 'Waiting on brand kit assets',
+    slaMinutes: getDefaultSlaMinutes('in-progress'),
     createdAt: minutesAgo(210),
     updatedAt: minutesAgo(18)
   },
@@ -133,6 +136,7 @@ const INITIAL_TASKS = [
     owner: 'Nara',
     status: 'backlog',
     description: 'Bundle component specs + tokens for future dashboard slices.',
+    slaMinutes: getDefaultSlaMinutes('backlog'),
     createdAt: minutesAgo(360),
     updatedAt: null
   },
@@ -142,8 +146,9 @@ const INITIAL_TASKS = [
     owner: 'Aster',
     status: 'backlog',
     description: 'Confirm gateway endpoints + Codex routes align with new task board.',
-    blocker: true,
-    slaMinutes: 240,
+    blockerFlag: true,
+    blockerReason: 'Need gateway schema approval',
+    slaMinutes: 720,
     createdAt: minutesAgo(400),
     updatedAt: minutesAgo(200)
   },
@@ -153,6 +158,7 @@ const INITIAL_TASKS = [
     owner: 'Osiris',
     status: 'review',
     description: 'Fold Memory Bank notes into Mission Control brief.',
+    slaMinutes: getDefaultSlaMinutes('review'),
     createdAt: minutesAgo(300),
     updatedAt: minutesAgo(90)
   },
@@ -171,6 +177,7 @@ const INITIAL_TASKS = [
     owner: 'Iris',
     status: 'in-progress',
     description: 'Header nav should flip between dashboard + tasks.',
+    slaMinutes: getDefaultSlaMinutes('in-progress'),
     createdAt: minutesAgo(40),
     updatedAt: minutesAgo(5)
   }
@@ -693,6 +700,8 @@ export default function App() {
   const [memoryData, setMemoryData] = useState(() => (useIntelApi ? [] : MEMORY_STREAM_ENTRIES))
   const [memoryError, setMemoryError] = useState(null)
   const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
+  const [slaAlerts, setSlaAlerts] = useState([])
+  const slaStatusRef = useRef(new Map())
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
@@ -927,6 +936,33 @@ export default function App() {
     }
   }, [useIntelApi])
 
+  useEffect(() => {
+    const nextMap = new Map()
+    const newAlerts = []
+    tasks.forEach(task => {
+      const meta = getSlaMeta(task)
+      nextMap.set(task.id, meta.slaStatus)
+      const previous = slaStatusRef.current.get(task.id) || 'ok'
+      if (meta.slaStatus !== previous) {
+        if (meta.slaStatus === 'warn' || meta.slaStatus === 'breach') {
+          newAlerts.push({
+            id: `sla-${task.id}-${meta.slaStatus}-${Date.now()}` ,
+            title: `Task "${task.title}" SLA ${meta.slaStatus.toUpperCase()}` ,
+            route: 'sla',
+            status: meta.slaStatus === 'breach' ? 'error' : 'warn',
+            duration: meta.elapsedMinutes != null ? `${Math.round(meta.elapsedMinutes)} min elapsed` : null,
+            time: formatClockTime(Date.now()),
+            sourceId: task.id
+          })
+        }
+      }
+    })
+    slaStatusRef.current = nextMap
+    if (newAlerts.length) {
+      setSlaAlerts(prev => [...newAlerts, ...prev].slice(0, 50))
+    }
+  }, [tasks])
+
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return
     const optimistic = {
@@ -1007,8 +1043,8 @@ export default function App() {
       time: 'just now',
       sourceId: entry.id
     }))
-    return [...staged, ...upstream]
-  }, [queue, opsFeedData, useIntelApi])
+    return [...slaAlerts, ...staged, ...upstream]
+  }, [queue, opsFeedData, useIntelApi, slaAlerts])
 
   const memoryEntries = useMemo(() => (useIntelApi ? memoryData : MEMORY_STREAM_ENTRIES), [memoryData, useIntelApi])
 
@@ -1210,6 +1246,7 @@ const handleEnterHub = () => setHasEntered(true)
     if (!trimmedTitle) return
     const trimmedDescription = description?.trim() || undefined
     const resolvedOwner = OWNER_SEQUENCE.includes(owner) ? owner : OWNER_SEQUENCE[0]
+    const createdAt = new Date().toISOString()
     setTasks(prev => [
       {
         id: crypto.randomUUID(),
@@ -1217,7 +1254,9 @@ const handleEnterHub = () => setHasEntered(true)
         owner: resolvedOwner,
         status: 'backlog',
         description: trimmedDescription,
-        updatedAt: getUpdateStamp()
+        createdAt,
+        updatedAt: getUpdateStamp(),
+        slaMinutes: getDefaultSlaMinutes('backlog')
       },
       ...prev
     ])
