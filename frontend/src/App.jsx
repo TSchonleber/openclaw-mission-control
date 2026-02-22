@@ -6,10 +6,20 @@ import OpsFeed from './components/OpsFeed'
 import MemoryStream from './components/MemoryStream'
 import CalendarPreview from './components/CalendarPreview'
 import TaskBoardPage from './components/TaskBoardPage'
+import CalendarPage from './components/CalendarPage'
 import avatarAster from './assets/avatars/aster.jpg'
 import avatarNara from './assets/avatars/nara.jpg'
 import avatarIris from './assets/avatars/iris.jpg'
 import avatarOsiris from './assets/avatars/osiris.jpg'
+import { OWNER_SEQUENCE, STATUS_SEQUENCE } from './config/taskConstants'
+import {
+  INITIAL_SCHEDULE,
+  CALENDAR_STORAGE_KEY,
+  DEFAULT_AGENT_OPTIONS,
+  SCHEDULE_TYPE_OPTIONS,
+  CALENDAR_DAYS,
+  getScheduleColorClass
+} from './config/scheduleConstants'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -46,9 +56,8 @@ const LATENCY_BASELINE_MS = 320
 const TRAFFIC_WINDOW_MINUTES = 30
 const MS_IN_MINUTE = 60 * 1000
 
-const OWNER_SEQUENCE = ['Iris', 'Terrence', 'Nara', 'Aster', 'Osiris']
-const STATUS_SEQUENCE = ['backlog', 'in-progress', 'review', 'done']
 const TASKS_STORAGE_KEY = 'mission-control/tasks'
+const minutesAgo = minutes => new Date(Date.now() - minutes * 60 * 1000).toISOString()
 
 const INITIAL_TASKS = [
   {
@@ -57,7 +66,9 @@ const INITIAL_TASKS = [
     owner: 'Iris',
     status: 'review',
     description: 'Import portrait art + wire carousel badges before shipping Mission Control.',
-    updatedAt: '1h ago'
+    slaMinutes: 90,
+    createdAt: minutesAgo(240),
+    updatedAt: minutesAgo(60)
   },
   {
     id: 'task-dashboard-widgets',
@@ -65,7 +76,8 @@ const INITIAL_TASKS = [
     owner: 'Terrence',
     status: 'in-progress',
     description: 'Ensure Ops Feed, Memory Stream, and Calendar render clean placeholder data.',
-    updatedAt: '28m ago'
+    createdAt: minutesAgo(180),
+    updatedAt: minutesAgo(28)
   },
   {
     id: 'task-nara-playbooks',
@@ -73,7 +85,9 @@ const INITIAL_TASKS = [
     owner: 'Nara',
     status: 'in-progress',
     description: 'Map hover/focus states + microcopy so Mission Control stays seductive.',
-    updatedAt: '18m ago'
+    blocker: true,
+    createdAt: minutesAgo(210),
+    updatedAt: minutesAgo(18)
   },
   {
     id: 'task-nara-hand-off',
@@ -81,7 +95,8 @@ const INITIAL_TASKS = [
     owner: 'Nara',
     status: 'backlog',
     description: 'Bundle component specs + tokens for future dashboard slices.',
-    updatedAt: 'Queued'
+    createdAt: minutesAgo(360),
+    updatedAt: null
   },
   {
     id: 'task-iris-contracts',
@@ -89,7 +104,10 @@ const INITIAL_TASKS = [
     owner: 'Aster',
     status: 'backlog',
     description: 'Confirm gateway endpoints + Codex routes align with new task board.',
-    updatedAt: 'Queued'
+    blocker: true,
+    slaMinutes: 240,
+    createdAt: minutesAgo(400),
+    updatedAt: minutesAgo(200)
   },
   {
     id: 'task-memory-lane',
@@ -97,7 +115,8 @@ const INITIAL_TASKS = [
     owner: 'Osiris',
     status: 'review',
     description: 'Fold Memory Bank notes into Mission Control brief.',
-    updatedAt: 'Today'
+    createdAt: minutesAgo(300),
+    updatedAt: minutesAgo(90)
   },
   {
     id: 'task-board-compose',
@@ -105,7 +124,8 @@ const INITIAL_TASKS = [
     owner: 'Terrence',
     status: 'done',
     description: 'Cycle owners Iris→Terrence→Aster→Osiris with inline controls.',
-    updatedAt: 'Shipped'
+    createdAt: minutesAgo(500),
+    updatedAt: minutesAgo(45)
   },
   {
     id: 'task-nav-toggle',
@@ -113,7 +133,8 @@ const INITIAL_TASKS = [
     owner: 'Iris',
     status: 'in-progress',
     description: 'Header nav should flip between dashboard + tasks.',
-    updatedAt: 'Just now'
+    createdAt: minutesAgo(40),
+    updatedAt: minutesAgo(5)
   }
 ]
 
@@ -186,6 +207,26 @@ const persistTasks = tasks => {
   }
 }
 
+const getStoredSchedule = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(CALENDAR_STORAGE_KEY)
+    const parsed = safeParseJSON(raw, null)
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+const persistSchedule = schedule => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(schedule))
+  } catch {
+    /* ignore */
+  }
+}
 
 const fetchJson = async path => {
   const response = await fetch(`${API_BASE}${path}`)
@@ -204,7 +245,8 @@ const DEFAULT_DIRECTIVES = [
 
 const NAV_SECTIONS = [
   { label: 'Dashboard', key: 'dashboard' },
-  { label: 'Tasks', key: 'tasks' }
+  { label: 'Tasks', key: 'tasks' },
+  { label: 'Calendar', key: 'calendar' }
 ]
 
 const AGENT_PROFILES = [
@@ -602,6 +644,7 @@ export default function App() {
   const [isSending, setIsSending] = useState(false)
   const [activeView, setActiveView] = useState('dashboard')
   const [tasks, setTasks] = useState(() => getStoredTasks() ?? INITIAL_TASKS)
+  const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
@@ -739,6 +782,10 @@ export default function App() {
     persistTasks(tasks)
   }, [tasks])
 
+  useEffect(() => {
+    persistSchedule(schedule)
+  }, [schedule])
+
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return
     const optimistic = {
@@ -820,6 +867,29 @@ export default function App() {
     }))
     return [...staged, ...OPS_FEED_BASE]
   }, [queue])
+
+  const calendarPreviewEntries = useMemo(() => {
+    if (!schedule.length) return CALENDAR_SCHEDULE
+    return schedule.slice(0, 8).map(item => {
+      const date = item.datetime ? new Date(item.datetime) : null
+      const validDate = date && !Number.isNaN(date.getTime())
+      const day = validDate ? CALENDAR_DAYS[date.getDay()] : '—'
+      const time = validDate
+        ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '—'
+      const nextLabel = validDate
+        ? `${day} • ${time}`
+        : item.recurrence || 'Scheduled'
+      return {
+        id: item.id,
+        label: item.title,
+        day,
+        time,
+        color: getScheduleColorClass(item.agent),
+        next: nextLabel
+      }
+    })
+  }, [schedule])
 
   const derivedTelemetry = useMemo(() => {
     const now = Date.now()
@@ -987,7 +1057,7 @@ const handleEnterHub = () => setHasEntered(true)
   }, [])
 
   const getUpdateStamp = useCallback(
-    () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    () => new Date().toISOString(),
     []
   )
 
@@ -1008,6 +1078,33 @@ const handleEnterHub = () => setHasEntered(true)
       ...prev
     ])
   }, [getUpdateStamp])
+
+  const handleAddScheduleItem = useCallback(({ title, agent, type, date, time, recurrence, notes }) => {
+    const trimmedTitle = title?.trim()
+    if (!trimmedTitle || !date) return
+    const normalizedAgent = DEFAULT_AGENT_OPTIONS.includes(agent) ? agent : DEFAULT_AGENT_OPTIONS[0]
+    const typeValues = SCHEDULE_TYPE_OPTIONS.map(option => option.value)
+    const normalizedType = typeValues.includes(type) ? type : SCHEDULE_TYPE_OPTIONS[0]?.value || 'task'
+    const timePart = time && time.length ? time : '09:00'
+    const timestamp = (() => {
+      const candidate = new Date(`${date}T${timePart}`)
+      if (!Number.isNaN(candidate.getTime())) return candidate.toISOString()
+      const fallback = new Date(date)
+      return Number.isNaN(fallback.getTime()) ? new Date().toISOString() : fallback.toISOString()
+    })()
+    const entry = {
+      id: crypto.randomUUID(),
+      title: trimmedTitle,
+      agent: normalizedAgent,
+      type: normalizedType,
+      datetime: timestamp,
+      recurrence: recurrence?.trim() || undefined,
+      notes: notes?.trim() || undefined,
+      createdBy: 'Iris',
+      createdAt: new Date().toISOString()
+    }
+    setSchedule(prev => [entry, ...prev])
+  }, [])
 
   const advanceTask = useCallback(id => {
     setTasks(prev => prev.map(task => {
@@ -1043,7 +1140,8 @@ const handleEnterHub = () => setHasEntered(true)
   }, [getUpdateStamp])
 
   const handleNavigate = useCallback(view => {
-    setActiveView(view === 'tasks' ? 'tasks' : 'dashboard')
+    const allowed = ['dashboard', 'tasks', 'calendar']
+    setActiveView(allowed.includes(view) ? view : 'dashboard')
   }, [])
 
   const handlePersonaAdjust = (key, value) => {
@@ -1058,7 +1156,7 @@ const handleEnterHub = () => setHasEntered(true)
     <div className={`app-shell ${hasEntered ? 'entered' : ''}`}>
       {!hasEntered && <LandingOverlay onEnter={handleEnterHub} />}
       <HeaderNav sections={NAV_SECTIONS} activeView={activeView} onNavigate={handleNavigate} />
-      {activeView === 'dashboard' ? (
+      {activeView === 'dashboard' && (
         <>
           <div className="shell-grid">
         <div className="mission-column">
@@ -1137,11 +1235,11 @@ const handleEnterHub = () => setHasEntered(true)
             <span className="eyebrow">Route mix</span>
             <span className="pill subtle">Live split</span>
           </div>
-          <div className="mix-bars">
-            <div className="mix-segment codex" style={{ width: `${telemetry.route.codexPct}%` }} />
-            <div className="mix-segment chat" style={{ width: `${telemetry.route.chatPct}%` }} />
-            <div className="mix-segment other" style={{ width: `${telemetry.route.otherPct}%` }} />
-          </div>
+            <div className="mix-bars">
+              <div className="mix-segment codex" style={{ width: `${telemetry.route.codexPct}%` }} />
+              <div className="mix-segment chat" style={{ width: `${telemetry.route.chatPct}%` }} />
+              <div className="mix-segment other" style={{ width: `${telemetry.route.otherPct}%` }} />
+            </div>
           <div className="mix-legend">
             <span>Codex {telemetry.route.codexPct}%</span>
             <span>Chat {telemetry.route.chatPct}%</span>
@@ -1233,12 +1331,14 @@ const handleEnterHub = () => setHasEntered(true)
           <section className="intel-grid">
             <OpsFeed entries={opsFeedEntries} onComplete={handleCommandComplete} />
             <MemoryStream entries={MEMORY_STREAM_ENTRIES} />
-            <CalendarPreview schedule={CALENDAR_SCHEDULE} />
+            <CalendarPreview schedule={calendarPreviewEntries} />
           </section>
         </div>
       </div>
         </>
-      ) : (
+      )}
+
+      {activeView === 'tasks' && (
         <TaskBoardPage
           tasks={tasks}
           owners={boardOwners}
@@ -1246,6 +1346,16 @@ const handleEnterHub = () => setHasEntered(true)
           onAdvance={advanceTask}
           onRewind={rewindTask}
           onReassign={reassignTask}
+          onBack={() => handleNavigate('dashboard')}
+        />
+      )}
+
+      {activeView === 'calendar' && (
+        <CalendarPage
+          schedule={schedule}
+          agentOptions={DEFAULT_AGENT_OPTIONS}
+          typeOptions={SCHEDULE_TYPE_OPTIONS}
+          onAddItem={handleAddScheduleItem}
           onBack={() => handleNavigate('dashboard')}
         />
       )}

@@ -5,6 +5,7 @@ const TaskComposer = ({ owners = [], onAdd }) => {
   const [title, setTitle] = useState('')
   const [owner, setOwner] = useState(() => ownerOptions[0] || 'Iris')
   const [description, setDescription] = useState('')
+  const canSubmit = Boolean(title.trim())
 
   useEffect(() => {
     if (!ownerOptions.includes(owner)) {
@@ -14,7 +15,7 @@ const TaskComposer = ({ owners = [], onAdd }) => {
 
   const handleSubmit = event => {
     event.preventDefault()
-    if (!title.trim()) return
+    if (!canSubmit) return
     onAdd?.({ title: title.trim(), owner, description: description.trim() || undefined })
     setTitle('')
     setDescription('')
@@ -40,7 +41,9 @@ const TaskComposer = ({ owners = [], onAdd }) => {
         value={description}
         onChange={event => setDescription(event.target.value)}
       />
-      <button type="submit">Add task</button>
+      <button type="submit" disabled={!canSubmit} title={canSubmit ? 'Add task to backlog' : 'Enter a title to enable'}>
+        Add task
+      </button>
     </form>
   )
 }

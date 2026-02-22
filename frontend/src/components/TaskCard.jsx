@@ -1,51 +1,63 @@
 import React from 'react'
+import { getOwnerClass, getStatusLabel } from '../config/taskConstants'
+import { formatUpdatedLabel } from '../utils/time'
 
-const OWNER_CLASS_MAP = {
-  Iris: 'owner-iris',
-  Terrence: 'owner-terrence',
-  Aster: 'owner-aster',
-  Osiris: 'owner-osiris'
-}
+const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => {
+  const ownerClass = getOwnerClass(task.owner)
+  const statusCopy = getStatusLabel(task.status)
+  const updatedLabel = formatUpdatedLabel(task.updatedAt)
+  const isBlocker = Boolean(task.blocker || task.blockerFlag)
+  const hasSla = typeof task.slaMinutes === 'number' && task.slaMinutes > 0
 
-const STATUS_LABELS = {
-  backlog: 'Backlog',
-  'in-progress': 'In progress',
-  review: 'Review',
-  done: 'Done'
-}
-
-const ownerClass = owner => OWNER_CLASS_MAP[owner] || 'owner-iris'
-const statusLabel = status => STATUS_LABELS[status] || 'Queued'
-
-const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => (
-  <article className="task-card">
-    <header>
-      <div className="task-card-title">
-        <strong>{task.title}</strong>
-        <span className={`status-pill status-${task.status}`}>{statusLabel(task.status)}</span>
-      </div>
-      <span className={`owner-pill ${ownerClass(task.owner)}`}>{task.owner}</span>
-    </header>
-    {task.description && <p>{task.description}</p>}
-    <footer>
-      <span className="task-updated">{task.updatedAt ? `Updated ${task.updatedAt}` : 'New'}</span>
-      <div className="task-actions">
-        {onRewind && (
-          <button type="button" onClick={() => onRewind(task.id)} aria-label="Move back">
-            ←
+  return (
+    <article className="task-card">
+      <header>
+        <div className="task-card-title">
+          <strong>{task.title}</strong>
+          <div className="task-flags">
+            <span className={`status-pill status-${task.status}`}>{statusCopy}</span>
+            {isBlocker && <span className="pill blocker">Blocker</span>}
+            {hasSla && <span className="pill sla">SLA {task.slaMinutes}m</span>}
+          </div>
+        </div>
+        <span className={`owner-pill ${ownerClass}`}>{task.owner}</span>
+      </header>
+      {task.description && <p>{task.description}</p>}
+      <footer>
+        <span className="task-updated">{updatedLabel}</span>
+        <div className="task-actions">
+          {onRewind && (
+            <button
+              type="button"
+              onClick={() => onRewind(task.id)}
+              aria-label="Move task to previous column"
+              title="Move task backward"
+            >
+              ←
+            </button>
+          )}
+          {onAdvance && (
+            <button
+              type="button"
+              onClick={() => onAdvance(task.id)}
+              aria-label="Move task to next column"
+              title="Move task forward"
+            >
+              →
+            </button>
+          )}
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => onReassign(task.id)}
+            title="Cycle owner"
+          >
+            Swap owner
           </button>
-        )}
-        {onAdvance && (
-          <button type="button" onClick={() => onAdvance(task.id)} aria-label="Move forward">
-            →
-          </button>
-        )}
-        <button type="button" className="ghost" onClick={() => onReassign(task.id)}>
-          Swap owner
-        </button>
-      </div>
-    </footer>
-  </article>
-)
+        </div>
+      </footer>
+    </article>
+  )
+}
 
 export default TaskCard

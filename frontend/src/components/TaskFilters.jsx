@@ -20,6 +20,7 @@ const TaskFilters = ({ owners = [], ownerFilter, onOwnerChange, search, onSearch
       <input
         type="search"
         placeholder="Search tasks"
+        aria-label="Search tasks"
         value={search}
         onChange={event => onSearch(event.target.value)}
       />

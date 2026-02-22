@@ -2,13 +2,7 @@ import React, { useMemo, useState } from 'react'
 import TaskColumn from './TaskColumn'
 import TaskComposer from './TaskComposer'
 import TaskFilters from './TaskFilters'
-
-const COLUMNS = [
-  { key: 'backlog', label: 'Backlog' },
-  { key: 'in-progress', label: 'In progress' },
-  { key: 'review', label: 'Review' },
-  { key: 'done', label: 'Done' }
-]
+import { TASK_COLUMNS } from '../config/taskConstants'
 
 const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassign, onBack }) => {
   const ownerOptions = useMemo(() => (owners?.length ? owners : ['Iris', 'Terrence', 'Aster', 'Osiris']), [owners])
@@ -26,7 +20,7 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
   }, [tasks, ownerFilter, search])
 
   const columnStats = useMemo(() => {
-    return COLUMNS.map(column => ({
+    return TASK_COLUMNS.map(column => ({
       key: column.key,
       label: column.label,
       count: tasks.filter(task => task.status === column.key).length
@@ -74,14 +68,15 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
         onSearch={setSearch}
       />
       <div className="task-board-columns">
-        {COLUMNS.map((column, index) => (
+        {TASK_COLUMNS.map((column, index) => (
           <TaskColumn
             key={column.key}
             title={column.label}
             tasks={filteredTasks.filter(task => task.status === column.key)}
-            onAdvance={index === COLUMNS.length - 1 ? null : onAdvance}
+            onAdvance={index === TASK_COLUMNS.length - 1 ? null : onAdvance}
             onRewind={index === 0 ? null : onRewind}
             onReassign={onReassign}
+            emptyMessage={column.emptyCopy}
           />
         ))}
       </div>
