@@ -7,14 +7,18 @@ const STATUS_STYLES = {
   error: 'pill error'
 }
 
-const OpsFeed = ({ entries, onComplete }) => (
+const OpsFeed = ({ entries, onComplete, loading, error }) => (
   <section className="panel ops-feed">
     <div className="panel-header">
       <h2>Ops feed</h2>
       <p>Commands and runs flowing through the stack.</p>
     </div>
+    {error && <p className="error-text">{error}</p>}
     <ul className="ops-feed-list">
-      {entries.length === 0 && (
+      {loading && entries.length === 0 && (
+        <li className="ops-feed-empty">Syncing telemetry…</li>
+      )}
+      {!loading && entries.length === 0 && (
         <li className="ops-feed-empty">Waiting for the next run…</li>
       )}
       {entries.map(entry => (
@@ -22,7 +26,7 @@ const OpsFeed = ({ entries, onComplete }) => (
           <div>
             <p>{entry.title}</p>
             <div className="log-meta">
-              <span className="badge route">{entry.route.toUpperCase()}</span>
+              <span className="badge route">{entry.route?.toUpperCase?.() || 'AUTO'}</span>
               <span className={STATUS_STYLES[entry.status] || 'pill subtle'}>{entry.status}</span>
               {entry.duration && <span>{entry.duration}</span>}
               <span>{entry.time}</span>

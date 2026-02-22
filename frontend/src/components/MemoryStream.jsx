@@ -6,14 +6,16 @@ const typeMap = {
   thought: 'badge subtle'
 }
 
-const MemoryStream = ({ entries }) => (
+const MemoryStream = ({ entries, loading, error }) => (
   <section className="panel memory-stream">
     <div className="panel-header">
       <h2>Memory stream</h2>
       <p>Latest reflections promoted from the vault.</p>
     </div>
+    {error && <p className="error-text">{error}</p>}
     <ul className="memory-stream-list">
-      {entries.length === 0 && <li className="ops-feed-empty">No memories captured yet.</li>}
+      {loading && entries.length === 0 && <li className="ops-feed-empty">Fetching memories…</li>}
+      {!loading && entries.length === 0 && <li className="ops-feed-empty">No memories captured yet.</li>}
       {entries.map(entry => (
         <li key={entry.id}>
           <div className="memory-stream-meta">

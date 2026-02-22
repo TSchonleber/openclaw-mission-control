@@ -21,6 +21,7 @@ import {
   getScheduleColorClass
 } from './config/scheduleConstants'
 import { listSchedule, createScheduleItem } from './api/schedule'
+import { fetchOpsFeed, fetchMemoryStream } from './api/intel'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -59,6 +60,42 @@ const MS_IN_MINUTE = 60 * 1000
 
 const TASKS_STORAGE_KEY = 'mission-control/tasks'
 const minutesAgo = minutes => new Date(Date.now() - minutes * 60 * 1000).toISOString()
+
+const formatClockTime = value => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const mapOpsFeedEntry = entry => {
+  if (!entry) return null
+  const ts = entry.ts_completed || entry.ts_received || entry.time || Date.now()
+  const duration = typeof entry.latencyMs === 'number'
+    ? `${Math.round(entry.latencyMs)} ms`
+    : entry.duration
+  return {
+    id: entry.id || crypto.randomUUID(),
+    title: entry.title || entry.text || 'Command',
+    route: entry.route || entry.routeOverride || 'auto',
+    status: entry.status || 'completed',
+    duration,
+    time: formatClockTime(ts),
+    sourceId: entry.sourceId
+  }
+}
+
+const mapMemoryEntry = entry => {
+  if (!entry) return null
+  const ts = entry.time || entry.ts || entry.created_at
+  return {
+    id: entry.id || crypto.randomUUID(),
+    type: entry.type || 'thought',
+    title: entry.title || 'Reflection',
+    summary: entry.summary || entry.body || '',
+    time: formatClockTime(ts)
+  }
+}
 
 const INITIAL_TASKS = [
   {
@@ -647,8 +684,15 @@ export default function App() {
   const [tasks, setTasks] = useState(() => getStoredTasks() ?? INITIAL_TASKS)
   const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
   const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true'
+  const useIntelApi = import.meta.env.VITE_USE_INTEL_API === 'true'
   const [scheduleError, setScheduleError] = useState(null)
   const [scheduleLoading, setScheduleLoading] = useState(useScheduleApi)
+  const [opsFeedData, setOpsFeedData] = useState(() => (useIntelApi ? [] : OPS_FEED_BASE))
+  const [opsFeedError, setOpsFeedError] = useState(null)
+  const [opsFeedLoading, setOpsFeedLoading] = useState(useIntelApi)
+  const [memoryData, setMemoryData] = useState(() => (useIntelApi ? [] : MEMORY_STREAM_ENTRIES))
+  const [memoryError, setMemoryError] = useState(null)
+  const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
@@ -815,6 +859,74 @@ export default function App() {
     }
   }, [useScheduleApi])
 
+  useEffect(() => {
+    if (!useIntelApi) return undefined
+    let ignore = false
+    let timer
+    const load = () => {
+      setOpsFeedLoading(true)
+      fetchOpsFeed({ limit: 50 })
+        .then(data => {
+          if (ignore) return
+          const mapped = Array.isArray(data)
+            ? data.map(mapOpsFeedEntry).filter(Boolean)
+            : []
+          setOpsFeedData(mapped)
+          setOpsFeedError(null)
+        })
+        .catch(error => {
+          if (!ignore) {
+            setOpsFeedError(error.message || 'Failed to load ops feed')
+          }
+        })
+        .finally(() => {
+          if (!ignore) {
+            setOpsFeedLoading(false)
+            timer = window.setTimeout(load, 30000)
+          }
+        })
+    }
+    load()
+    return () => {
+      ignore = true
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [useIntelApi])
+
+  useEffect(() => {
+    if (!useIntelApi) return undefined
+    let ignore = false
+    let timer
+    const load = () => {
+      setMemoryLoading(true)
+      fetchMemoryStream({ limit: 20 })
+        .then(data => {
+          if (ignore) return
+          const mapped = Array.isArray(data)
+            ? data.map(mapMemoryEntry).filter(Boolean)
+            : []
+          setMemoryData(mapped)
+          setMemoryError(null)
+        })
+        .catch(error => {
+          if (!ignore) {
+            setMemoryError(error.message || 'Failed to load memory stream')
+          }
+        })
+        .finally(() => {
+          if (!ignore) {
+            setMemoryLoading(false)
+            timer = window.setTimeout(load, 60000)
+          }
+        })
+    }
+    load()
+    return () => {
+      ignore = true
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [useIntelApi])
+
   const sendMessage = useCallback(async () => {
     if (!input.trim()) return
     const optimistic = {
@@ -885,6 +997,7 @@ export default function App() {
   }, [messages])
 
   const opsFeedEntries = useMemo(() => {
+    const upstream = useIntelApi ? opsFeedData : OPS_FEED_BASE
     const staged = queue.map(entry => ({
       id: `queue-${entry.id}`,
       title: entry.text,
@@ -894,8 +1007,10 @@ export default function App() {
       time: 'just now',
       sourceId: entry.id
     }))
-    return [...staged, ...OPS_FEED_BASE]
-  }, [queue])
+    return [...staged, ...upstream]
+  }, [queue, opsFeedData, useIntelApi])
+
+  const memoryEntries = useMemo(() => (useIntelApi ? memoryData : MEMORY_STREAM_ENTRIES), [memoryData, useIntelApi])
 
   const calendarPreviewEntries = useMemo(() => {
     if (!schedule.length) return CALENDAR_SCHEDULE
@@ -1372,8 +1487,17 @@ const handleEnterHub = () => setHasEntered(true)
         </aside>
           </div>
           <section className="intel-grid">
-            <OpsFeed entries={opsFeedEntries} onComplete={handleCommandComplete} />
-            <MemoryStream entries={MEMORY_STREAM_ENTRIES} />
+            <OpsFeed
+              entries={opsFeedEntries}
+              onComplete={handleCommandComplete}
+              loading={opsFeedLoading}
+              error={opsFeedError}
+            />
+            <MemoryStream
+              entries={memoryEntries}
+              loading={memoryLoading}
+              error={memoryError}
+            />
             <CalendarPreview schedule={calendarPreviewEntries} />
           </section>
         </div>
