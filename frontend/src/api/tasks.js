@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const NGROK_HEADER = API_BASE.includes('ngrok-free') ? { 'ngrok-skip-browser-warning': 'true' } : {}
 
 const buildUrl = path => `${API_BASE}${path}`
 
@@ -14,7 +15,7 @@ const jsonRequest = (path, options = {}) => {
   const { method = 'GET', body } = options
   return fetch(buildUrl(path), {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...NGROK_HEADER },
     body: body ? JSON.stringify(body) : undefined
   }).then(handleResponse)
 }

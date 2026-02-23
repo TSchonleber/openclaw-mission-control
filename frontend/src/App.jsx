@@ -40,6 +40,7 @@ const getWsUrl = () => {
 
 const DEFAULT_WS = getWsUrl()
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const NGROK_HEADER = API_BASE.includes('ngrok-free') ? { 'ngrok-skip-browser-warning': 'true' } : {}
 const SESSION_KEY_PREFIX = 'nara-hub:session:'
 const buildSessionId = route => {
   if (!route || typeof window === 'undefined') return undefined
@@ -326,7 +327,7 @@ const persistSchedule = schedule => {
 }
 
 const fetchJson = async path => {
-  const response = await fetch(`${API_BASE}${path}`)
+  const response = await fetch(`${API_BASE}${path}`, { headers: NGROK_HEADER })
   if (!response.ok) {
     const message = await response.text()
     throw new Error(message || `Request failed: ${response.status}`)
@@ -1073,7 +1074,7 @@ export default function App() {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...NGROK_HEADER },
         body: JSON.stringify(body)
       })
       if (!response.ok) {

@@ -1,10 +1,11 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-const DEFAULT_HEADERS = { 'Content-Type': 'application/json' }
+const NGROK_HEADER = API_BASE.includes('ngrok-free') ? { 'ngrok-skip-browser-warning': 'true' } : {}
+const DEFAULT_HEADERS = { 'Content-Type': 'application/json', ...NGROK_HEADER }
 
 const buildUrl = path => `${API_BASE}/mission/schedule${path || ''}`
 
 export const listSchedule = async () => {
-  const response = await fetch(buildUrl(''))
+  const response = await fetch(buildUrl(''), { headers: NGROK_HEADER })
   if (!response.ok) {
     const text = await response.text()
     throw new Error(text || `Schedule fetch failed (${response.status})`)
@@ -39,7 +40,7 @@ export const updateScheduleItem = async (id, payload) => {
 }
 
 export const deleteScheduleItem = async id => {
-  const response = await fetch(buildUrl(`/${id}`), { method: 'DELETE' })
+  const response = await fetch(buildUrl(`/${id}`), { method: 'DELETE', headers: NGROK_HEADER })
   if (!response.ok) {
     const text = await response.text()
     throw new Error(text || `Schedule delete failed (${response.status})`)
