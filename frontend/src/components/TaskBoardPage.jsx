@@ -13,30 +13,59 @@ const TaskBoardPage = ({ tasks, owners, autoArchiveDone, onToggleAutoArchive, on
   const [ownerFilter, setOwnerFilter] = useState('All')
   const [search, setSearch] = useState('')
 
-  const filteredTasks = useMemo(() => {
+  const now = Date.now()
+  const doneCutoffMs = 7 * 24 * 60 * 60 * 1000
+
+  const displayTasks = useMemo(() => {
     return tasks.filter(task => {
-      if (ownerFilter !== 'All' && task.owner !== ownerFilter) return false
+      if (autoArchiveDone && task.status === 'done') {
+        const updatedAt = task.updatedAt ? new Date(task.updatedAt).getTime() : null
+        if (updatedAt && now - updatedAt > doneCutoffMs) return false
+      }
+      const hasNowTag = (task.tags || []).includes('now')
+      if (task.status !== 'done' && !hasNowTag) return false
+      return true
+    })
+  }, [tasks, autoArchiveDone, now])
+
+  const unassignedTasks = useMemo(() => displayTasks.filter(task => task.owner === 'Unassigned'), [displayTasks])
+  const activeTasks = useMemo(() => displayTasks.filter(task => task.owner !== 'Unassigned'), [displayTasks])
+
+  const filteredTasks = useMemo(() => {
+    const source = ownerFilter === 'Unassigned' ? unassignedTasks : activeTasks
+    return source.filter(task => {
+      if (ownerFilter !== 'All' && ownerFilter !== 'Unassigned' && task.owner !== ownerFilter) return false
       if (search && !`${task.title} ${task.description || ''}`.toLowerCase().includes(search.toLowerCase())) {
         return false
       }
       return true
     })
-  }, [tasks, ownerFilter, search])
+  }, [activeTasks, unassignedTasks, ownerFilter, search])
+
+  const unassignedFiltered = useMemo(() => {
+    if (ownerFilter !== 'All' && ownerFilter !== 'Unassigned') return []
+    return unassignedTasks.filter(task => {
+      if (search && !`${task.title} ${task.description || ''}`.toLowerCase().includes(search.toLowerCase())) {
+        return false
+      }
+      return true
+    })
+  }, [unassignedTasks, ownerFilter, search])
 
   const columnStats = useMemo(() => {
     return TASK_COLUMNS.map(column => ({
       key: column.key,
       label: column.label,
-      count: tasks.filter(task => task.status === column.key).length
+      count: activeTasks.filter(task => task.status === column.key).length
     }))
-  }, [tasks])
+  }, [activeTasks])
 
   const ownerStats = useMemo(() => {
     return ownerOptions.map(option => ({
       owner: option,
-      count: tasks.filter(task => task.owner === option).length
+      count: displayTasks.filter(task => task.owner === option).length
     }))
-  }, [ownerOptions, tasks])
+  }, [ownerOptions, displayTasks])
 
   const blockedCount = useMemo(() => filteredTasks.filter(task => task.blockerFlag || task.blocker).length, [filteredTasks])
   const atRiskCount = useMemo(() => filteredTasks.filter(task => {

@@ -199,13 +199,16 @@ const INITIAL_TASKS = [
 
 const normalizeTask = task => {
   if (!task) return null;
-  const owner = task.owner || 'Iris'
+  const rawOwner = task.owner || ''
+  const owner = rawOwner && rawOwner.toLowerCase() !== 'unknown' ? rawOwner : 'Unassigned'
   const status = task.status || 'backlog'
   const readOnly = Boolean(task.readOnly)
+  const tags = Array.isArray(task.tags) ? task.tags : []
   return {
     ...task,
     owner,
     status,
+    tags,
     readOnly,
     source: task.source || (readOnly ? 'sync' : 'manual'),
     lastSyncedAt: task.lastSyncedAt || null

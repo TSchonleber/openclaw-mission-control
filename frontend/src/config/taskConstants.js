@@ -1,7 +1,7 @@
 export const OWNER_SEQUENCE = ['Iris', 'Nara', 'Aster', 'Osiris']
 export const STATUS_SEQUENCE = ['backlog', 'in-progress', 'review', 'done']
 
-export const DEFAULT_OWNERS = OWNER_SEQUENCE
+export const DEFAULT_OWNERS = [...OWNER_SEQUENCE, 'Unassigned']
 
 export const TASK_COLUMNS = [
   { key: 'backlog', label: 'Backlog', emptyCopy: 'No backlog tasks queued.' },
@@ -21,7 +21,8 @@ const OWNER_CLASS_MAP = {
   Terrence: 'owner-terrence',
   Nara: 'owner-nara',
   Aster: 'owner-aster',
-  Osiris: 'owner-osiris'
+  Osiris: 'owner-osiris',
+  Unassigned: 'owner-unassigned'
 }
 
 const STATUS_LABELS = {
