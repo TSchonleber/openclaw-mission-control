@@ -740,9 +740,9 @@ export default function App() {
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
   const [activeView, setActiveView] = useState('dashboard')
-  const useTasksApi = import.meta.env.VITE_USE_TASKS_API === 'true'
-  const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true'
-  const useIntelApi = import.meta.env.VITE_USE_INTEL_API === 'true'
+  const useTasksApi = import.meta.env.VITE_USE_TASKS_API === 'true' || Boolean(import.meta.env.VITE_API_BASE_URL)
+  const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true' || Boolean(import.meta.env.VITE_API_BASE_URL)
+  const useIntelApi = import.meta.env.VITE_USE_INTEL_API === 'true' || Boolean(import.meta.env.VITE_API_BASE_URL)
 
   const [tasks, setTasks] = useState(() => (useTasksApi ? [] : normalizeTaskList(getStoredTasks() ?? INITIAL_TASKS)))
   const [tasksLoading, setTasksLoading] = useState(useTasksApi)
