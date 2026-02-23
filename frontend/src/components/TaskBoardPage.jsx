@@ -103,7 +103,6 @@ const TaskBoardPage = ({ tasks, owners, autoArchiveDone, onToggleAutoArchive, on
             key={column.key}
             title={column.label}
             tasks={filteredTasks.filter(task => task.status === column.key)}
-            slaClock={slaClock}
             onAdvance={index === TASK_COLUMNS.length - 1 ? null : onAdvance}
             onRewind={index === 0 ? null : onRewind}
             onReassign={onReassign}
