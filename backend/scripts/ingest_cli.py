@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Optional
+import glob
 
 import typer
 
@@ -20,7 +21,7 @@ def run(
 ) -> None:
     chat_paths: list[Path] = []
     if chat_glob:
-        chat_paths = [Path(p) for p in Path().glob(chat_glob)]
+        chat_paths = [Path(p) for p in glob.glob(chat_glob)]
     tasks_repo = TaskRepository()
     schedule_repo = ScheduleRepository()
     stats = sync_sources(tasks_repo, schedule_repo, obsidian_root=obsidian_path, chat_logs=chat_paths)

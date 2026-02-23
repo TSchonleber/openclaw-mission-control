@@ -167,14 +167,12 @@ class TaskRepository:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     source TEXT,
-                    source_id TEXT UNIQUE,
+                    source_id TEXT,
                     last_synced_at TEXT,
                     read_only INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
-            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON mission_tasks(updated_at)")
-            self._conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source_id ON mission_tasks(source_id)")
         self._ensure_extended_columns()
 
     def _ensure_extended_columns(self) -> None:
@@ -183,7 +181,7 @@ class TaskRepository:
         if "source" not in columns:
             statements.append("ALTER TABLE mission_tasks ADD COLUMN source TEXT")
         if "source_id" not in columns:
-            statements.append("ALTER TABLE mission_tasks ADD COLUMN source_id TEXT UNIQUE")
+            statements.append("ALTER TABLE mission_tasks ADD COLUMN source_id TEXT")
         if "last_synced_at" not in columns:
             statements.append("ALTER TABLE mission_tasks ADD COLUMN last_synced_at TEXT")
         if "read_only" not in columns:

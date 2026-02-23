@@ -13,7 +13,10 @@ if TYPE_CHECKING:
     from ingest.schemas import IngestEvent
 from pydantic import BaseModel, Field, validator
 
-from .task_service import TaskOwner
+try:
+    from .task_service import TaskOwner
+except ImportError:
+    from task_service import TaskOwner
 
 
 def _now_iso() -> str:
@@ -326,4 +329,3 @@ class ScheduleRepository:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
-*** End of File
