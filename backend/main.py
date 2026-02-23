@@ -39,10 +39,15 @@ from schedule_service import (
 
 logging.basicConfig(level=logging.INFO)
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://nara-hub.vercel.app",
+]
 app = FastAPI(title="Nara Hub Backend", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://nara-hub-git-[^/]+\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,6 +60,16 @@ tasks_repo = TaskRepository()
 schedule_repo = ScheduleRepository()
 ACTIVE_CONNECTIONS: set[WebSocket] = set()
 
+
+
+@app.middleware("http")
+async def ensure_cors_headers(request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    if origin and (origin in ALLOWED_ORIGINS or origin.endswith(".vercel.app")):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
