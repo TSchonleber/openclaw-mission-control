@@ -24,10 +24,15 @@ from telemetry import TelemetryEvent, TelemetryTracker
 from task_service import TaskRepository, TaskCreateRequest, TaskUpdateRequest, TaskResponse, OWNER_SEQUENCE, STATUS_SEQUENCE, TaskStatus, TaskOwner
 from schedule_service import ScheduleRepository, ScheduleCreateRequest, ScheduleUpdateRequest, ScheduleResponse
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://nara-hub.vercel.app",
+]
 app = FastAPI(title="Hub Gateway", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://nara-hub-git-[^/]+\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +51,16 @@ ROUTE_MAP = {
 messages: List[Dict[str, Any]] = []
 connected_clients: Set[WebSocket] = set()
 
+
+
+@app.middleware("http")
+async def ensure_cors_headers(request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    if origin and (origin in ALLOWED_ORIGINS or origin.endswith(".vercel.app")):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 class CommandPayload(BaseModel):
     message: str = Field(..., min_length=1)
