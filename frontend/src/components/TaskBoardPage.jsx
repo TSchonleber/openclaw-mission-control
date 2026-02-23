@@ -4,7 +4,7 @@ import TaskComposer from './TaskComposer'
 import TaskFilters from './TaskFilters'
 import { TASK_COLUMNS, getSlaMeta, DEFAULT_OWNERS } from '../config/taskConstants'
 
-const TaskBoardPage = ({ tasks, owners, slaClock, autoArchiveDone, onToggleAutoArchive, onAddTask, onAdvance, onRewind, onReassign, onComplete, onDelete, loading, error, onBack }) => {
+const TaskBoardPage = ({ tasks, owners, autoArchiveDone, onToggleAutoArchive, onAddTask, onAdvance, onRewind, onReassign, onComplete, onDelete, loading, error, onBack }) => {
 
   const handleAutoArchiveToggle = event => {
     onToggleAutoArchive?.(event.target.checked)
@@ -40,7 +40,7 @@ const TaskBoardPage = ({ tasks, owners, slaClock, autoArchiveDone, onToggleAutoA
 
   const blockedCount = useMemo(() => filteredTasks.filter(task => task.blockerFlag || task.blocker).length, [filteredTasks])
   const atRiskCount = useMemo(() => filteredTasks.filter(task => {
-    const meta = getSlaMeta(task, slaClock)
+    const meta = getSlaMeta(task)
     return meta.slaStatus === 'warn' || meta.slaStatus === 'breach'
   }).length, [filteredTasks])
 

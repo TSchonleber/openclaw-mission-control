@@ -710,7 +710,6 @@ export default function App() {
   const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
   const [slaAlerts, setSlaAlerts] = useState([])
   const slaStatusRef = useRef(new Map())
-  const [slaClock, setSlaClock] = useState(Date.now())
   const [autoArchiveDone, setAutoArchiveDone] = useState(true)
 
   const refreshTasks = useCallback(() => {
@@ -725,11 +724,6 @@ export default function App() {
       .finally(() => setTasksLoading(false))
   }, [useTasksApi])
 
-  useEffect(() => {
-    const id = window.setInterval(() => setSlaClock(Date.now()), 60000)
-    return () => window.clearInterval(id)
-  }, [])
-
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
     const unique = new Set(OWNER_SEQUENCE)
@@ -737,7 +731,7 @@ export default function App() {
       if (task.owner) unique.add(task.owner)
     })
     return Array.from(unique)
-  }, [tasks, slaClock])
+  }, [tasks])
   const wsRef = useRef(null)
   const reconnectRef = useRef()
   const scrollRef = useRef()
@@ -1717,7 +1711,6 @@ const handleEnterHub = () => setHasEntered(true)
         <TaskBoardPage
           tasks={tasks}
           owners={boardOwners}
-          slaClock={slaClock}
           autoArchiveDone={autoArchiveDone}
           onToggleAutoArchive={setAutoArchiveDone}
           onAddTask={handleAddTask}

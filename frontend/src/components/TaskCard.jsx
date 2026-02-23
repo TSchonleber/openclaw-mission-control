@@ -15,15 +15,15 @@ const formatRemaining = minutes => {
   return `${Math.max(1, Math.round(minutes))}m left`
 }
 
-const TaskCard = ({ task, slaClock, onAdvance, onRewind, onReassign, onComplete, onDelete }) => {
+const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete }) => {
   const ownerClass = getOwnerClass(task.owner)
   const statusCopy = getStatusLabel(task.status)
   const updatedLabel = formatUpdatedLabel(task.updatedAt)
   const isBlocker = Boolean(task.blocker || task.blockerFlag)
-  const slaMeta = getSlaMeta(task, slaClock)
+  const slaMeta = getSlaMeta(task)
   const hasSla = Boolean(slaMeta.slaMinutes)
   const remainingLabel = formatRemaining(slaMeta.remainingMinutes)
-  const deadlineIso = getTaskDeadline(task, slaClock)
+  const deadlineIso = getTaskDeadline(task)
 
   const cardClass = `task-card sla-${slaMeta.slaStatus || 'ok'}`
 
