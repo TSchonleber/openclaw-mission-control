@@ -230,12 +230,23 @@ async def _dispatch_command(agent_id: str, target_agent: str, payload: CommandPa
 
     received_at = datetime.now(timezone.utc)
     try:
-        response = await run_agent_command(
-            agent=target_agent,
-            message=payload.message,
-            session_id=payload.sessionId,
-            thinking=payload.thinking,
-        )
+        try:
+            response = await run_agent_command(
+                agent=target_agent,
+                message=payload.message,
+                session_id=payload.sessionId,
+                thinking=payload.thinking,
+            )
+        except OpenClawError as exc:
+            if payload.sessionId and "Invalid session ID" in str(exc):
+                response = await run_agent_command(
+                    agent=target_agent,
+                    message=payload.message,
+                    session_id=None,
+                    thinking=payload.thinking,
+                )
+            else:
+                raise
         responded_at = datetime.now(timezone.utc)
         meta = response.get("meta", {})
         agent_meta = meta.get("agentMeta", {}) if isinstance(meta, dict) else {}
