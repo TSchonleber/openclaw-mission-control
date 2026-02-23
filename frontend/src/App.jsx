@@ -40,7 +40,17 @@ const getWsUrl = () => {
 
 const DEFAULT_WS = getWsUrl()
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-const buildSessionId = route => (route ? `agent:${route}:main` : undefined)
+const SESSION_KEY_PREFIX = 'nara-hub:session:'
+const buildSessionId = route => {
+  if (!route || typeof window === 'undefined') return undefined
+  const key = `${SESSION_KEY_PREFIX}${route}`
+  let sessionId = window.localStorage.getItem(key)
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    window.localStorage.setItem(key, sessionId)
+  }
+  return sessionId
+}
 const COMMAND_LOG_LIMIT = 100
 
 const ROUTE_OPTIONS = [
