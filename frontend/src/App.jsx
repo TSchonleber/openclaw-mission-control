@@ -20,8 +20,10 @@ import {
   CALENDAR_DAYS,
   getScheduleColorClass
 } from './config/scheduleConstants'
-import { listSchedule, createScheduleItem } from './api/schedule'
+import { listSchedule, createScheduleItem, deleteScheduleItem, updateScheduleItem } from './api/schedule'
 import { fetchOpsFeed, fetchMemoryStream } from './api/intel'
+import { listTasks, createTask as apiCreateTask, advanceTask as apiAdvanceTask, rewindTask as apiRewindTask, reassignTask as apiReassignTask, completeTask as apiCompleteTask, deleteTask as apiDeleteTask } from './api/tasks'
+import { autoAssignOwner } from './utils/routingRules'
 
 const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
 const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
@@ -111,7 +113,7 @@ const INITIAL_TASKS = [
   {
     id: 'task-dashboard-widgets',
     title: 'Polish intel widgets',
-    owner: 'Terrence',
+    owner: 'Aster',
     status: 'in-progress',
     description: 'Ensure Ops Feed, Memory Stream, and Calendar render clean placeholder data.',
     slaMinutes: getDefaultSlaMinutes('in-progress'),
@@ -165,7 +167,7 @@ const INITIAL_TASKS = [
   {
     id: 'task-board-compose',
     title: 'Wire task composer UX',
-    owner: 'Terrence',
+    owner: 'Nara',
     status: 'done',
     description: 'Cycle owners Iris→Terrence→Aster→Osiris with inline controls.',
     createdAt: minutesAgo(500),
@@ -688,12 +690,18 @@ export default function App() {
   const [composerError, setComposerError] = useState(null)
   const [isSending, setIsSending] = useState(false)
   const [activeView, setActiveView] = useState('dashboard')
-  const [tasks, setTasks] = useState(() => getStoredTasks() ?? INITIAL_TASKS)
-  const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
+  const useTasksApi = import.meta.env.VITE_USE_TASKS_API === 'true'
   const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true'
   const useIntelApi = import.meta.env.VITE_USE_INTEL_API === 'true'
+
+  const [tasks, setTasks] = useState(() => (useTasksApi ? [] : getStoredTasks() ?? INITIAL_TASKS))
+  const [tasksLoading, setTasksLoading] = useState(useTasksApi)
+  const [tasksError, setTasksError] = useState(null)
+
+  const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
   const [scheduleError, setScheduleError] = useState(null)
   const [scheduleLoading, setScheduleLoading] = useState(useScheduleApi)
+
   const [opsFeedData, setOpsFeedData] = useState(() => (useIntelApi ? [] : OPS_FEED_BASE))
   const [opsFeedError, setOpsFeedError] = useState(null)
   const [opsFeedLoading, setOpsFeedLoading] = useState(useIntelApi)
@@ -702,6 +710,18 @@ export default function App() {
   const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
   const [slaAlerts, setSlaAlerts] = useState([])
   const slaStatusRef = useRef(new Map())
+
+  const refreshTasks = useCallback(() => {
+    if (!useTasksApi) return Promise.resolve()
+    setTasksLoading(true)
+    return listTasks()
+      .then(data => {
+        setTasks(data)
+        setTasksError(null)
+      })
+      .catch(err => setTasksError(err.message || 'Failed to load tasks'))
+      .finally(() => setTasksLoading(false))
+  }, [useTasksApi])
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
@@ -750,6 +770,10 @@ export default function App() {
           setCommandLogError(null)
           return
         }
+        if (payload && payload.type === 'task_event') {
+          if (useTasksApi) refreshTasks()
+          return
+        }
 
         if (payload && payload.type === 'message') {
           const messagePayload = payload.message || payload.payload || payload.data
@@ -781,7 +805,7 @@ export default function App() {
       console.error('Websocket init failed', error)
       setStatus('error')
     }
-  }, [])
+  }, [refreshTasks, useTasksApi])
 
   useEffect(() => {
     connect()
@@ -836,12 +860,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (useTasksApi) return
     persistTasks(tasks)
-  }, [tasks])
+  }, [tasks, useTasksApi])
 
   useEffect(() => {
     persistSchedule(schedule)
   }, [schedule])
+
+  useEffect(() => {
+    if (!useTasksApi) return undefined
+    refreshTasks()
+  }, [useTasksApi, refreshTasks])
 
   useEffect(() => {
     if (!useScheduleApi) return undefined
@@ -1245,7 +1275,17 @@ const handleEnterHub = () => setHasEntered(true)
     const trimmedTitle = title?.trim()
     if (!trimmedTitle) return
     const trimmedDescription = description?.trim() || undefined
-    const resolvedOwner = OWNER_SEQUENCE.includes(owner) ? owner : OWNER_SEQUENCE[0]
+    const resolvedOwner = owner && OWNER_SEQUENCE.includes(owner)
+      ? owner
+      : autoAssignOwner(`${trimmedTitle} ${trimmedDescription || ''}`)
+
+    if (useTasksApi) {
+      apiCreateTask({ title: trimmedTitle, description: trimmedDescription, owner: resolvedOwner })
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to create task'))
+      return
+    }
+
     const createdAt = new Date().toISOString()
     setTasks(prev => [
       {
@@ -1260,7 +1300,25 @@ const handleEnterHub = () => setHasEntered(true)
       },
       ...prev
     ])
-  }, [getUpdateStamp])
+  }, [getUpdateStamp, useTasksApi, refreshTasks])
+
+
+  const handleDeleteScheduleItem = useCallback(id => {
+    const confirmDelete = typeof window !== 'undefined'
+      ? window.confirm('Remove this calendar entry?')
+      : true
+    if (!confirmDelete) return
+    if (useScheduleApi) {
+      deleteScheduleItem(id)
+        .then(() => {
+          setSchedule(prev => prev.filter(item => item.id !== id))
+          setScheduleError(null)
+        })
+        .catch(error => setScheduleError(error.message || 'Failed to delete entry'))
+      return
+    }
+    setSchedule(prev => prev.filter(item => item.id !== id))
+  }, [useScheduleApi])
 
   const handleAddScheduleItem = useCallback(({ title, agent, type, date, time, recurrence, notes }) => {
     const trimmedTitle = title?.trim()
@@ -1295,7 +1353,6 @@ const handleEnterHub = () => setHasEntered(true)
         })
         .catch(error => {
           setScheduleError(error.message)
-          setSchedule(prev => [entry, ...prev])
         })
       return
     }
@@ -1303,7 +1360,68 @@ const handleEnterHub = () => setHasEntered(true)
     setSchedule(prev => [entry, ...prev])
   }, [useScheduleApi])
 
-  const advanceTask = useCallback(id => {
+  const handleEditScheduleItem = useCallback(id => {
+    const target = schedule.find(item => item.id === id)
+    if (!target) return
+    if (typeof window === 'undefined') return
+    const promptValue = (label, fallback = '') => {
+      const value = window.prompt(label, fallback)
+      if (value === null) throw new Error('cancelled')
+      return value.trim()
+    }
+    try {
+      const nextTitle = promptValue('Update title', target.title)
+      const baseDate = target.datetime ? new Date(target.datetime) : null
+      const defaultDate = baseDate && !Number.isNaN(baseDate.getTime()) ? baseDate.toISOString().slice(0, 10) : ''
+      const defaultTime = baseDate && !Number.isNaN(baseDate.getTime())
+        ? baseDate.toISOString().slice(11, 16)
+        : '09:00'
+      const nextDate = promptValue('Update date (YYYY-MM-DD)', defaultDate)
+      const nextTime = promptValue('Update time (HH:MM)', defaultTime)
+      const nextAgent = promptValue(`Update agent (${DEFAULT_AGENT_OPTIONS.join(', ')})`, target.agent)
+      const typeLabels = SCHEDULE_TYPE_OPTIONS.map(option => option.value).join(', ')
+      const nextType = promptValue(`Update type (${typeLabels})`, target.type)
+      const nextRecurrence = promptValue('Update recurrence (optional)', target.recurrence || '')
+      const nextNotes = promptValue('Update notes (optional)', target.notes || '')
+      const normalizedAgent = DEFAULT_AGENT_OPTIONS.includes(nextAgent) ? nextAgent : DEFAULT_AGENT_OPTIONS[0]
+      const normalizedType = SCHEDULE_TYPE_OPTIONS.some(option => option.value === nextType)
+        ? nextType
+        : SCHEDULE_TYPE_OPTIONS[0].value
+      const timestamp = (() => {
+        if (!nextDate) return target.datetime
+        const candidate = new Date(`${nextDate}T${nextTime || '09:00'}`)
+        return Number.isNaN(candidate.getTime()) ? target.datetime : candidate.toISOString()
+      })()
+      const payload = {
+        title: nextTitle || target.title,
+        agent: normalizedAgent,
+        type: normalizedType,
+        datetime: timestamp,
+        recurrence: nextRecurrence || undefined,
+        notes: nextNotes || undefined
+      }
+      if (useScheduleApi) {
+        updateScheduleItem(id, payload)
+          .then(serverItem => {
+            setSchedule(prev => prev.map(item => (item.id === id ? (serverItem ?? { ...item, ...payload }) : item)))
+            setScheduleError(null)
+          })
+          .catch(error => setScheduleError(error.message || 'Failed to update entry'))
+        return
+      }
+      setSchedule(prev => prev.map(item => (item.id === id ? { ...item, ...payload } : item)))
+    } catch {
+      // user cancelled one of the prompts
+    }
+  }, [schedule, useScheduleApi])
+
+  const handleAdvanceTask = useCallback(id => {
+    if (useTasksApi) {
+      apiAdvanceTask(id)
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to advance task'))
+      return
+    }
     setTasks(prev => prev.map(task => {
       if (task.id !== id) return task
       const currentIndex = STATUS_SEQUENCE.indexOf(task.status)
@@ -1313,9 +1431,15 @@ const handleEnterHub = () => setHasEntered(true)
       if (!nextStatus) return task
       return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
     }))
-  }, [getUpdateStamp])
+  }, [getUpdateStamp, useTasksApi, refreshTasks])
 
-  const rewindTask = useCallback(id => {
+  const handleRewindTask = useCallback(id => {
+    if (useTasksApi) {
+      apiRewindTask(id)
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to rewind task'))
+      return
+    }
     setTasks(prev => prev.map(task => {
       if (task.id !== id) return task
       const currentIndex = STATUS_SEQUENCE.indexOf(task.status)
@@ -1324,9 +1448,19 @@ const handleEnterHub = () => setHasEntered(true)
       const nextStatus = STATUS_SEQUENCE[safeIndex - 1]
       return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
     }))
-  }, [getUpdateStamp])
+  }, [getUpdateStamp, useTasksApi, refreshTasks])
 
-  const reassignTask = useCallback(id => {
+  const handleReassignTask = useCallback(id => {
+    if (useTasksApi) {
+      const task = tasks.find(item => item.id === id)
+      const currentIndex = task ? OWNER_SEQUENCE.indexOf(task.owner) : 0
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      const nextOwner = OWNER_SEQUENCE[(safeIndex + 1) % OWNER_SEQUENCE.length]
+      apiReassignTask(id, nextOwner)
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to reassign task'))
+      return
+    }
     setTasks(prev => prev.map(task => {
       if (task.id !== id) return task
       const currentIndex = OWNER_SEQUENCE.indexOf(task.owner)
@@ -1334,7 +1468,33 @@ const handleEnterHub = () => setHasEntered(true)
       const nextOwner = OWNER_SEQUENCE[(safeIndex + 1) % OWNER_SEQUENCE.length]
       return { ...task, owner: nextOwner, updatedAt: getUpdateStamp() }
     }))
-  }, [getUpdateStamp])
+  }, [getUpdateStamp, useTasksApi, refreshTasks, tasks])
+
+  const handleCompleteTask = useCallback(id => {
+    if (useTasksApi) {
+      apiCompleteTask(id)
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to complete task'))
+      return
+    }
+    setTasks(prev => prev.map(task => (
+      task.id === id ? { ...task, status: 'done', updatedAt: getUpdateStamp() } : task
+    )))
+  }, [getUpdateStamp, useTasksApi, refreshTasks])
+
+  const handleDeleteTask = useCallback(id => {
+    const confirmDelete = typeof window !== 'undefined'
+      ? window.confirm('Delete this task?')
+      : true
+    if (!confirmDelete) return
+    if (useTasksApi) {
+      apiDeleteTask(id)
+        .then(() => refreshTasks())
+        .catch(err => setTasksError(err.message || 'Failed to delete task'))
+      return
+    }
+    setTasks(prev => prev.filter(task => task.id !== id))
+  }, [useTasksApi, refreshTasks])
 
   const handleNavigate = useCallback(view => {
     const allowed = ['dashboard', 'tasks', 'calendar']
@@ -1549,9 +1709,13 @@ const handleEnterHub = () => setHasEntered(true)
           tasks={tasks}
           owners={boardOwners}
           onAddTask={handleAddTask}
-          onAdvance={advanceTask}
-          onRewind={rewindTask}
-          onReassign={reassignTask}
+          onAdvance={handleAdvanceTask}
+          onRewind={handleRewindTask}
+          onReassign={handleReassignTask}
+          onComplete={handleCompleteTask}
+          onDelete={handleDeleteTask}
+          loading={tasksLoading}
+          error={tasksError}
           onBack={() => handleNavigate('dashboard')}
         />
       )}
@@ -1562,6 +1726,8 @@ const handleEnterHub = () => setHasEntered(true)
           agentOptions={DEFAULT_AGENT_OPTIONS}
           typeOptions={SCHEDULE_TYPE_OPTIONS}
           onAddItem={handleAddScheduleItem}
+          onEditItem={handleEditScheduleItem}
+          onDeleteItem={handleDeleteScheduleItem}
           onBack={() => handleNavigate('dashboard')}
         />
       )}

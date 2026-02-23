@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { CALENDAR_DAYS, getScheduleColorClass } from '../config/scheduleConstants'
+import { CALENDAR_DAYS } from '../config/scheduleConstants'
 import { formatRelativeTime } from '../utils/time'
 
 const formatTimeLabel = value => {
@@ -9,16 +9,49 @@ const formatTimeLabel = value => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-const getDayLabel = item => {
-  if (item.dayHint && CALENDAR_DAYS.includes(item.dayHint)) return item.dayHint
-  if (item.datetime) {
-    const date = new Date(item.datetime)
-    if (!Number.isNaN(date.getTime())) {
-      return CALENDAR_DAYS[date.getDay()]
-    }
-  }
-  return 'Sun'
+const formatDateKey = date => date.toISOString().split('T')[0]
+
+const startOfWeek = date => {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - d.getDay())
+  return d
 }
+
+const addDays = (date, days) => {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return d
+}
+
+const typeLabelFromValue = (value, options) => options.find(option => option.value === value)?.label || value
+
+const DayEvents = ({ events, typeOptions, onDelete, onEdit }) => (
+  <ul className="day-events">
+    {events.length === 0 && <li className="calendar-empty">No items</li>}
+    {events.map(item => (
+      <li key={item.id} className="day-event-row">
+        <div>
+          <strong>{item.title}</strong>
+          <span>{item.agent} • {typeLabelFromValue(item.type, typeOptions)}</span>
+        </div>
+        <div className="event-meta">
+          <time>{formatTimeLabel(item.datetime)}</time>
+          {onEdit && (
+            <button type="button" className="event-edit" onClick={() => onEdit(item.id)} aria-label="Edit event">
+              ✎
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" className="event-delete" onClick={() => onDelete(item.id)} aria-label="Delete event">
+              🗑
+            </button>
+          )}
+        </div>
+      </li>
+    ))}
+  </ul>
+)
 
 const ScheduleComposer = ({ agents, typeOptions, onAdd }) => {
   const [title, setTitle] = useState('')
@@ -84,48 +117,46 @@ const ScheduleComposer = ({ agents, typeOptions, onAdd }) => {
   )
 }
 
-const ScheduleFilters = ({ agentOptions, typeOptions, agentFilter, typeFilter, onAgentChange, onTypeChange }) => {
-  return (
-    <div className="calendar-filters">
-      <div className="filter-group">
-        <span>Agents</span>
-        <div className="filter-buttons">
-          {['All', ...agentOptions].map(option => (
-            <button
-              key={option}
-              type="button"
-              className={agentFilter === option ? 'active' : ''}
-              onClick={() => onAgentChange(option)}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="filter-group">
-        <span>Types</span>
-        <div className="filter-buttons">
-          {['All', ...typeOptions.map(option => option.label)].map(label => (
-            <button
-              key={label}
-              type="button"
-              className={typeFilter === label ? 'active' : ''}
-              onClick={() => onTypeChange(label)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+const ScheduleFilters = ({ agentOptions, typeOptions, agentFilter, typeFilter, onAgentChange, onTypeChange }) => (
+  <div className="calendar-filters">
+    <div className="filter-group">
+      <span>Agents</span>
+      <div className="filter-buttons">
+        {['All', ...agentOptions].map(option => (
+          <button
+            key={option}
+            type="button"
+            className={agentFilter === option ? 'active' : ''}
+            onClick={() => onAgentChange(option)}
+          >
+            {option}
+          </button>
+        ))}
       </div>
     </div>
-  )
-}
+    <div className="filter-group">
+      <span>Types</span>
+      <div className="filter-buttons">
+        {['All', ...typeOptions.map(option => option.label)].map(label => (
+          <button
+            key={label}
+            type="button"
+            className={typeFilter === label ? 'active' : ''}
+            onClick={() => onTypeChange(label)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+)
 
-const typeLabelFromValue = (value, options) => options.find(option => option.value === value)?.label || value
-
-const CalendarPage = ({ schedule, agentOptions, typeOptions, onAddItem, onBack }) => {
+const CalendarPage = ({ schedule, agentOptions, typeOptions, onAddItem, onEditItem, onDeleteItem, onBack }) => {
   const [agentFilter, setAgentFilter] = useState('All')
   const [typeFilter, setTypeFilter] = useState('All')
+  const [viewMode, setViewMode] = useState('week')
+  const [visibleDate, setVisibleDate] = useState(new Date())
 
   const filteredSchedule = useMemo(() => {
     return schedule.filter(item => {
@@ -138,16 +169,66 @@ const CalendarPage = ({ schedule, agentOptions, typeOptions, onAddItem, onBack }
     })
   }, [schedule, agentFilter, typeFilter, typeOptions])
 
-  const calendarMap = useMemo(() => {
-    const base = {}
-    CALENDAR_DAYS.forEach(day => { base[day] = [] })
+  const eventsByDay = useMemo(() => {
+    const map = {}
     filteredSchedule.forEach(item => {
-      const dayLabel = getDayLabel(item)
-      if (!base[dayLabel]) base[dayLabel] = []
-      base[dayLabel].push(item)
+      if (!item.datetime) return
+      const date = new Date(item.datetime)
+      if (Number.isNaN(date.getTime())) return
+      const key = formatDateKey(date)
+      map[key] = map[key] ? [...map[key], item] : [item]
     })
-    return base
+    return map
   }, [filteredSchedule])
+
+  const weekDays = useMemo(() => {
+    if (viewMode !== 'week') return []
+    const start = startOfWeek(visibleDate)
+    return CALENDAR_DAYS.map((day, index) => {
+      const date = addDays(start, index)
+      const key = formatDateKey(date)
+      return { day, date, key, events: eventsByDay[key] || [] }
+    })
+  }, [visibleDate, viewMode, eventsByDay])
+
+  const monthDays = useMemo(() => {
+    if (viewMode !== 'month') return []
+    const firstOfMonth = new Date(visibleDate.getFullYear(), visibleDate.getMonth(), 1)
+    const gridStart = startOfWeek(firstOfMonth)
+    const days = []
+    for (let i = 0; i < 42; i += 1) {
+      const date = addDays(gridStart, i)
+      const key = formatDateKey(date)
+      days.push({
+        date,
+        key,
+        isCurrentMonth: date.getMonth() === visibleDate.getMonth(),
+        events: eventsByDay[key] || []
+      })
+    }
+    return days
+  }, [visibleDate, viewMode, eventsByDay])
+
+  const shiftBackward = () => {
+    setVisibleDate(prev => (viewMode === 'month'
+      ? new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+      : addDays(prev, -7)))
+  }
+
+  const shiftForward = () => {
+    setVisibleDate(prev => (viewMode === 'month'
+      ? new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+      : addDays(prev, 7)))
+  }
+
+  const jumpToday = () => setVisibleDate(new Date())
+
+  const handleDeleteEvent = id => {
+    if (!onDeleteItem) return
+    onDeleteItem(id)
+  }
+
+  const visibleLabel = visibleDate.toLocaleString([], { month: 'long', year: 'numeric' })
 
   const upcoming = useMemo(() => {
     const dated = filteredSchedule.filter(item => item.datetime)
@@ -173,6 +254,19 @@ const CalendarPage = ({ schedule, agentOptions, typeOptions, onAddItem, onBack }
         <button type="button" className="ghost" onClick={onBack}>← Back to dashboard</button>
       </header>
 
+      <div className="calendar-controls">
+        <div className="view-toggle">
+          <button type="button" className={viewMode === 'week' ? 'active' : ''} onClick={() => setViewMode('week')}>Week</button>
+          <button type="button" className={viewMode === 'month' ? 'active' : ''} onClick={() => setViewMode('month')}>Month</button>
+        </div>
+        <div className="nav-buttons">
+          <button type="button" onClick={shiftBackward}>‹</button>
+          <span>{visibleLabel}</span>
+          <button type="button" onClick={shiftForward}>›</button>
+          <button type="button" onClick={jumpToday}>Today</button>
+        </div>
+      </div>
+
       <div className="calendar-meta">
         {typeTallies.map(tally => (
           <span key={tally.label} className="task-pill">
@@ -190,46 +284,48 @@ const CalendarPage = ({ schedule, agentOptions, typeOptions, onAddItem, onBack }
         onTypeChange={setTypeFilter}
       />
 
-      <div className="calendar-layout">
-        <section className="calendar-grid">
-          {CALENDAR_DAYS.map(day => (
-            <div key={day} className="calendar-column">
-              <span className="calendar-day">{day}</span>
-              <ul>
-                {calendarMap[day].length === 0 && <li className="calendar-empty">No items</li>}
-                {calendarMap[day].map(item => (
-                  <li key={item.id} className={getScheduleColorClass(item.agent)}>
-                    <strong>{item.title}</strong>
-                    <span>{formatTimeLabel(item.datetime)} • {item.agent}</span>
-                    <small>{typeLabelFromValue(item.type, typeOptions)}</small>
-                  </li>
-                ))}
-              </ul>
+      {viewMode === 'week' ? (
+        <div className="calendar-grid">
+          {weekDays.map(day => (
+            <div key={day.day} className="calendar-column">
+              <span className="calendar-day">{day.day}</span>
+              <DayEvents events={day.events} typeOptions={typeOptions} onEdit={onEditItem} onDelete={handleDeleteEvent} />
             </div>
           ))}
-        </section>
+        </div>
+      ) : (
+        <div className="calendar-month-grid">
+          {monthDays.map(day => (
+            <div key={day.key} className={`month-cell ${day.isCurrentMonth ? '' : 'muted'}`}>
+              <div className="month-cell-header">
+                <span>{day.date.getDate()}</span>
+              </div>
+              <DayEvents events={day.events} typeOptions={typeOptions} onEdit={onEditItem} onDelete={handleDeleteEvent} />
+            </div>
+          ))}
+        </div>
+      )}
 
-        <aside className="calendar-sidebar">
-          <div className="schedule-upcoming">
-            <h3>Upcoming</h3>
-            <ul>
-              {upcoming.length === 0 && <li className="calendar-empty">No scheduled work.</li>}
-              {upcoming.map(item => (
-                <li key={`upcoming-${item.id}`}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.agent} • {typeLabelFromValue(item.type, typeOptions)}</span>
-                  </div>
-                  <div>
-                    <time>{formatTimeLabel(item.datetime)}</time>
-                    <small>{formatRelativeTime(item.datetime)}</small>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <ScheduleComposer agents={agentOptions} typeOptions={typeOptions} onAdd={onAddItem} />
-        </aside>
+      <div className="calendar-sidebar">
+        <div className="schedule-upcoming">
+          <h3>Upcoming</h3>
+          <ul>
+            {upcoming.length === 0 && <li className="calendar-empty">No scheduled work.</li>}
+            {upcoming.map(item => (
+              <li key={`upcoming-${item.id}`}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.agent} • {typeLabelFromValue(item.type, typeOptions)}</span>
+                </div>
+                <div>
+                  <time>{formatTimeLabel(item.datetime)}</time>
+                  <small>{formatRelativeTime(item.datetime)}</small>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <ScheduleComposer agents={agentOptions} typeOptions={typeOptions} onAdd={onAddItem} />
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-export const OWNER_SEQUENCE = ['Iris', 'Terrence', 'Nara', 'Aster', 'Osiris']
+export const OWNER_SEQUENCE = ['Iris', 'Nara', 'Aster', 'Osiris']
 export const STATUS_SEQUENCE = ['backlog', 'in-progress', 'review', 'done']
 
 export const DEFAULT_OWNERS = OWNER_SEQUENCE

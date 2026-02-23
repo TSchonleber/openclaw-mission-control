@@ -2,6 +2,7 @@ node_modules
 __pycache__
 .env
 .venv
+backend/mission_tasks.db
 *.log
 *.pid
 dist

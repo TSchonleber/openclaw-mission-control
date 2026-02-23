@@ -2,7 +2,7 @@ import React from 'react'
 import { getOwnerClass, getStatusLabel, getSlaMeta } from '../config/taskConstants'
 import { formatUpdatedLabel } from '../utils/time'
 
-const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => {
+const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete }) => {
   const ownerClass = getOwnerClass(task.owner)
   const statusCopy = getStatusLabel(task.status)
   const updatedLabel = formatUpdatedLabel(task.updatedAt)
@@ -68,6 +68,28 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign }) => {
           >
             Swap owner
           </button>
+          {onComplete && (
+            <button
+              type="button"
+              className="ghost complete"
+              onClick={() => onComplete(task.id)}
+              title="Mark task complete"
+              aria-label="Mark task complete"
+            >
+              ✓
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className="ghost danger"
+              onClick={() => onDelete(task.id)}
+              title="Delete task"
+              aria-label="Delete task"
+            >
+              🗑
+            </button>
+          )}
         </div>
       </footer>
     </article>

@@ -1866,6 +1866,16 @@ button.ghost:hover {
   padding: 6px 12px;
 }
 
+.task-actions .ghost.complete {
+  color: var(--success);
+  border-color: rgba(82, 247, 198, 0.5);
+}
+
+.task-actions .ghost.danger {
+  color: var(--danger);
+  border-color: rgba(255, 95, 130, 0.6);
+}
+
 
 .mission-stack .list-card {
   display: flex;
@@ -2186,4 +2196,118 @@ button.ghost:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.muted-text {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.error-text {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+
+.calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-toggle button,
+.nav-buttons button {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.view-toggle button.active {
+  border-color: var(--accent-secondary);
+  color: var(--accent-secondary);
+}
+
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.month-cell {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 10px;
+  min-height: 140px;
+  background: rgba(5, 7, 13, 0.8);
+}
+
+.month-cell.muted {
+  opacity: 0.5;
+}
+
+.month-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.day-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-event-row {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.day-event-row strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.day-event-row span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.event-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-delete {
+  border: 1px solid rgba(255, 95, 130, 0.6);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.event-edit {
+  border: 1px solid rgba(32, 211, 255, 0.5);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent-secondary);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
 }

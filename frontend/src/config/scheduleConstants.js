@@ -1,6 +1,6 @@
 export const CALENDAR_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export const DEFAULT_AGENT_OPTIONS = ['Iris', 'Terrence', 'Nara', 'Aster', 'Osiris']
+export const DEFAULT_AGENT_OPTIONS = ['Iris', 'Nara', 'Aster', 'Osiris']
 
 export const SCHEDULE_TYPE_OPTIONS = [
   { value: 'cron', label: 'Cron job' },
@@ -31,7 +31,7 @@ export const INITIAL_SCHEDULE = [
   {
     id: 'sched-ops-standup',
     title: 'Ops stand-up',
-    agent: 'Terrence',
+    agent: 'Aster',
     type: 'cron',
     datetime: hoursFromNow(4),
     recurrence: 'Weekly • Mon / Thu',
@@ -58,7 +58,7 @@ export const INITIAL_SCHEDULE = [
     datetime: hoursFromNow(52),
     recurrence: 'One-off',
     notes: 'Mission Control UI sweep',
-    createdBy: 'Terrence',
+    createdBy: 'Nara',
     createdAt: new Date().toISOString()
   },
   {
@@ -80,7 +80,7 @@ export const INITIAL_SCHEDULE = [
     datetime: hoursFromNow(96),
     recurrence: 'Weekly • Fri 13:00',
     notes: 'Ship list + blockers',
-    createdBy: 'Terrence',
+    createdBy: 'Aster',
     createdAt: new Date().toISOString()
   }
 ]

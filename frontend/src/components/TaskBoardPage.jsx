@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react'
 import TaskColumn from './TaskColumn'
 import TaskComposer from './TaskComposer'
 import TaskFilters from './TaskFilters'
-import { TASK_COLUMNS, getSlaMeta } from '../config/taskConstants'
+import { TASK_COLUMNS, getSlaMeta, DEFAULT_OWNERS } from '../config/taskConstants'
 
-const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassign, onBack }) => {
-  const ownerOptions = useMemo(() => (owners?.length ? owners : ['Iris', 'Terrence', 'Aster', 'Osiris']), [owners])
+const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassign, onComplete, onDelete, loading, error, onBack }) => {
+  const ownerOptions = useMemo(() => (owners?.length ? owners : DEFAULT_OWNERS), [owners])
   const [ownerFilter, setOwnerFilter] = useState('All')
   const [search, setSearch] = useState('')
 
@@ -49,6 +49,8 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
         </div>
         <button type="button" className="ghost" onClick={onBack}>← Back to dashboard</button>
       </header>
+      {error && <p className="error-text">{error}</p>}
+      {loading && <p className="muted-text">Syncing tasks…</p>}
       <div className="task-board-meta">
         <div className="task-pill-group">
           {columnStats.map(stat => (
@@ -90,6 +92,8 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
             onAdvance={index === TASK_COLUMNS.length - 1 ? null : onAdvance}
             onRewind={index === 0 ? null : onRewind}
             onReassign={onReassign}
+            onComplete={onComplete}
+            onDelete={onDelete}
             emptyMessage={column.emptyCopy}
           />
         ))}

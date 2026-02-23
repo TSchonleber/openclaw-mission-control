@@ -1,7 +1,7 @@
 import React from 'react'
 import TaskCard from './TaskCard'
 
-const TaskColumn = ({ title, tasks, onAdvance, onRewind, onReassign, emptyMessage = 'No tasks here.' }) => (
+const TaskColumn = ({ title, tasks, onAdvance, onRewind, onReassign, onComplete, onDelete, emptyMessage = 'No tasks here.' }) => (
   <section className="task-column">
     <div className="task-column-header">
       <h3>{title}</h3>
@@ -16,6 +16,8 @@ const TaskColumn = ({ title, tasks, onAdvance, onRewind, onReassign, emptyMessag
           onAdvance={onAdvance}
           onRewind={onRewind}
           onReassign={onReassign}
+          onComplete={onComplete}
+          onDelete={onDelete}
         />
       ))}
     </div>

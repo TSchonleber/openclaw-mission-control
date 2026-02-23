@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
 const TaskComposer = ({ owners = [], onAdd }) => {
-  const ownerOptions = useMemo(() => (owners.length ? owners : ['Iris', 'Terrence', 'Aster', 'Osiris']), [owners])
+  const ownerOptions = useMemo(() => (owners.length ? owners : DEFAULT_OWNERS), [owners])
   const [title, setTitle] = useState('')
   const [owner, setOwner] = useState(() => ownerOptions[0] || 'Iris')
   const [description, setDescription] = useState('')

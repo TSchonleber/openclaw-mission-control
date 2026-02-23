@@ -1,7 +1,8 @@
 import React from 'react'
+import { DEFAULT_OWNERS } from '../config/taskConstants'
 
 const TaskFilters = ({ owners = [], ownerFilter, onOwnerChange, search, onSearch }) => {
-  const ownerOptions = owners.length ? owners : ['Iris', 'Terrence', 'Aster', 'Osiris']
+  const ownerOptions = owners.length ? owners : DEFAULT_OWNERS
   const filterOptions = ['All', ...ownerOptions]
   return (
     <div className="task-filters">
