@@ -8,8 +8,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
+
+if TYPE_CHECKING:
+    from ingest.schemas import IngestTask
 from pydantic import BaseModel, Field, validator
 
 
@@ -26,6 +29,7 @@ class TaskOwner(str, Enum):
     nara = "Nara"
     aster = "Aster"
     osiris = "Osiris"
+    unknown = "Unknown"
 
 
 class TaskStatus(str, Enum):
@@ -42,6 +46,10 @@ class TaskCreateRequest(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.backlog)
     blockerFlag: bool = Field(default=False, alias="blockerFlag")
     tags: List[str] = Field(default_factory=list)
+    readOnly: bool = Field(default=False, alias="readOnly")
+    source: Optional[str] = None
+    sourceId: Optional[str] = Field(default=None, alias="sourceId")
+    lastSyncedAt: Optional[str] = Field(default=None, alias="lastSyncedAt")
 
     class Config:
         allow_population_by_field_name = True
@@ -61,6 +69,8 @@ class TaskUpdateRequest(BaseModel):
     status: Optional[TaskStatus] = None
     blockerFlag: Optional[bool] = Field(default=None, alias="blockerFlag")
     tags: Optional[List[str]] = None
+    readOnly: Optional[bool] = Field(default=None, alias="readOnly")
+    lastSyncedAt: Optional[str] = Field(default=None, alias="lastSyncedAt")
 
     class Config:
         allow_population_by_field_name = True
@@ -91,6 +101,10 @@ class TaskResponse(BaseModel):
     tags: List[str]
     createdAt: str = Field(alias="createdAt")
     updatedAt: str = Field(alias="updatedAt")
+    readOnly: bool = Field(alias="readOnly")
+    source: Optional[str]
+    sourceId: Optional[str] = Field(default=None, alias="sourceId")
+    lastSyncedAt: Optional[str] = Field(default=None, alias="lastSyncedAt")
 
     class Config:
         allow_population_by_field_name = True
@@ -107,6 +121,10 @@ class TaskRecord:
     tags: List[str]
     created_at: str
     updated_at: str
+    read_only: bool
+    source: Optional[str]
+    source_id: Optional[str]
+    last_synced_at: Optional[str]
 
     def to_response(self) -> TaskResponse:
         return TaskResponse(
@@ -119,6 +137,10 @@ class TaskRecord:
             tags=self.tags,
             createdAt=self.created_at,
             updatedAt=self.updated_at,
+            readOnly=self.read_only,
+            source=self.source,
+            sourceId=self.source_id,
+            lastSyncedAt=self.last_synced_at,
         )
 
 
@@ -143,10 +165,37 @@ class TaskRepository:
                     blocker_flag INTEGER NOT NULL DEFAULT 0,
                     tags TEXT NOT NULL DEFAULT '[]',
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    source TEXT,
+                    source_id TEXT UNIQUE,
+                    last_synced_at TEXT,
+                    read_only INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON mission_tasks(updated_at)")
+            self._conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source_id ON mission_tasks(source_id)")
+        self._ensure_extended_columns()
+
+    def _ensure_extended_columns(self) -> None:
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(mission_tasks)")}
+        statements = []
+        if "source" not in columns:
+            statements.append("ALTER TABLE mission_tasks ADD COLUMN source TEXT")
+        if "source_id" not in columns:
+            statements.append("ALTER TABLE mission_tasks ADD COLUMN source_id TEXT UNIQUE")
+        if "last_synced_at" not in columns:
+            statements.append("ALTER TABLE mission_tasks ADD COLUMN last_synced_at TEXT")
+        if "read_only" not in columns:
+            statements.append("ALTER TABLE mission_tasks ADD COLUMN read_only INTEGER NOT NULL DEFAULT 0")
+        with self._conn:
+            for stmt in statements:
+                try:
+                    self._conn.execute(stmt)
+                except sqlite3.OperationalError:
+                    continue
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON mission_tasks(updated_at)")
+            self._conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_source_id ON mission_tasks(source_id)")
 
     def list_tasks(
         self,
@@ -194,13 +243,17 @@ class TaskRepository:
             tags=payload.tags,
             created_at=now,
             updated_at=now,
+            read_only=bool(payload.readOnly),
+            source=payload.source,
+            source_id=payload.sourceId,
+            last_synced_at=payload.lastSyncedAt,
         )
         with self._lock, self._conn:
             self._conn.execute(
                 """
                 INSERT INTO mission_tasks (
-                    id, title, description, owner, status, blocker_flag, tags, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id, title, description, owner, status, blocker_flag, tags, created_at, updated_at, source, source_id, last_synced_at, read_only
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.id,
@@ -212,6 +265,10 @@ class TaskRepository:
                     json.dumps(record.tags),
                     record.created_at,
                     record.updated_at,
+                    record.source,
+                    record.source_id,
+                    record.last_synced_at,
+                    int(record.read_only),
                 ),
             )
         return record
@@ -230,12 +287,16 @@ class TaskRepository:
             tags=current.tags if payload.tags is None else payload.tags,
             created_at=current.created_at,
             updated_at=_now_iso(),
+            read_only=current.read_only if payload.readOnly is None else bool(payload.readOnly),
+            source=current.source,
+            source_id=current.source_id,
+            last_synced_at=payload.lastSyncedAt if payload.lastSyncedAt is not None else current.last_synced_at,
         )
         with self._lock, self._conn:
             self._conn.execute(
                 """
                 UPDATE mission_tasks
-                SET title = ?, description = ?, owner = ?, status = ?, blocker_flag = ?, tags = ?, updated_at = ?
+                SET title = ?, description = ?, owner = ?, status = ?, blocker_flag = ?, tags = ?, updated_at = ?, read_only = ?, last_synced_at = ?
                 WHERE id = ?
                 """,
                 (
@@ -246,6 +307,8 @@ class TaskRepository:
                     int(updated.blocker_flag),
                     json.dumps(updated.tags),
                     updated.updated_at,
+                    int(updated.read_only),
+                    updated.last_synced_at,
                     updated.id,
                 ),
             )
@@ -284,6 +347,94 @@ class TaskRepository:
         payload = TaskUpdateRequest(owner=TaskOwner(next_owner))
         return self.update_task(task_id, payload)
 
+    def upsert_from_ingest(self, ingest_task: "IngestTask") -> TaskRecord:
+        now = _now_iso()
+        owner_value = getattr(ingest_task.owner, "value", ingest_task.owner) or TaskOwner.unknown.value
+        status_value = getattr(ingest_task.status, "value", ingest_task.status) or TaskStatus.backlog.value
+        read_only = True
+        with self._lock, self._conn:
+            row = self._conn.execute(
+                "SELECT * FROM mission_tasks WHERE source_id = ?",
+                (ingest_task.source_id,),
+            ).fetchone()
+            if row:
+                current = self._row_to_record(row)
+                if not current.read_only:
+                    return current
+                updated = TaskRecord(
+                    id=current.id,
+                    title=ingest_task.title.strip(),
+                    description=ingest_task.description or current.description,
+                    owner=owner_value,
+                    status=status_value,
+                    blocker_flag=current.blocker_flag,
+                    tags=ingest_task.tags or current.tags,
+                    created_at=current.created_at,
+                    updated_at=now,
+                    read_only=read_only,
+                    source=ingest_task.source,
+                    source_id=ingest_task.source_id,
+                    last_synced_at=now,
+                )
+                self._conn.execute(
+                    """
+                    UPDATE mission_tasks
+                    SET title = ?, description = ?, owner = ?, status = ?, tags = ?, updated_at = ?, read_only = ?, last_synced_at = ?, blocker_flag = ?, source = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        updated.title,
+                        updated.description,
+                        updated.owner,
+                        updated.status,
+                        json.dumps(updated.tags),
+                        updated.updated_at,
+                        int(updated.read_only),
+                        updated.last_synced_at,
+                        int(updated.blocker_flag),
+                        updated.source,
+                        updated.id,
+                    ),
+                )
+                return updated
+            record = TaskRecord(
+                id=str(uuid.uuid4()),
+                title=ingest_task.title.strip(),
+                description=ingest_task.description,
+                owner=owner_value,
+                status=status_value,
+                blocker_flag=False,
+                tags=ingest_task.tags,
+                created_at=now,
+                updated_at=now,
+                read_only=read_only,
+                source=ingest_task.source,
+                source_id=ingest_task.source_id,
+                last_synced_at=now,
+            )
+            self._conn.execute(
+                """
+                INSERT INTO mission_tasks (id, title, description, owner, status, blocker_flag, tags, created_at, updated_at, source, source_id, last_synced_at, read_only)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.id,
+                    record.title,
+                    record.description,
+                    record.owner,
+                    record.status,
+                    int(record.blocker_flag),
+                    json.dumps(record.tags),
+                    record.created_at,
+                    record.updated_at,
+                    record.source,
+                    record.source_id,
+                    record.last_synced_at,
+                    int(record.read_only),
+                ),
+            )
+            return record
+
     @staticmethod
     def _row_to_record(row: sqlite3.Row) -> TaskRecord:
         return TaskRecord(
@@ -296,4 +447,8 @@ class TaskRepository:
             tags=json.loads(row["tags"] or "[]"),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+            read_only=bool(row["read_only"]),
+            source=row["source"],
+            source_id=row["source_id"],
+            last_synced_at=row["last_synced_at"],
         )
