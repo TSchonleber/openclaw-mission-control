@@ -3,16 +3,26 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+import sys
+from pathlib import Path
+
+BACKEND_PATH = Path(__file__).resolve().parent.parent / "backend"
+if str(BACKEND_PATH) not in sys.path:
+    sys.path.append(str(BACKEND_PATH))
+
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
-from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from command_log import CommandLog
 from openclaw_client import OpenClawError, run_agent_command
 from telemetry import TelemetryEvent, TelemetryTracker
+
+from task_service import TaskRepository, TaskCreateRequest, TaskUpdateRequest, TaskResponse, OWNER_SEQUENCE, STATUS_SEQUENCE, TaskStatus, TaskOwner
+from schedule_service import ScheduleRepository, ScheduleCreateRequest, ScheduleUpdateRequest, ScheduleResponse
 
 app = FastAPI(title="Hub Gateway", version="0.1.0")
 app.add_middleware(
@@ -25,6 +35,8 @@ app.add_middleware(
 
 command_log = CommandLog(max_entries=150)
 telemetry = TelemetryTracker(window_minutes=30)
+tasks_repo = TaskRepository()
+schedule_repo = ScheduleRepository()
 ROUTE_MAP = {
     "aster": "aster",
     "nara": "main",
@@ -79,6 +91,121 @@ async def send_command(agent_id: str, payload: CommandPayload, background: Backg
 
     background.add_task(_dispatch_command, agent_id, target_agent, payload, command_id)
     return {"id": command_id, "status": "queued"}
+
+
+
+
+def _normalize_owner(owner: str | None) -> str | None:
+    if not owner:
+        return None
+    for candidate in OWNER_SEQUENCE:
+        if candidate.lower() == owner.lower():
+            return candidate
+    return None
+
+
+def _normalize_status(status: str | None) -> str | None:
+    if not status:
+        return None
+    for candidate in STATUS_SEQUENCE:
+        if candidate.lower() == status.lower():
+            return candidate
+    return None
+
+
+@app.get("/mission/tasks", response_model=list[TaskResponse])
+async def mission_tasks(
+    owner: str | None = Query(default=None),
+    task_status: str | None = Query(default=None, alias="status"),
+    search: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> list[TaskResponse]:
+    normalized_owner = _normalize_owner(owner)
+    normalized_status = _normalize_status(task_status)
+    records = tasks_repo.list_tasks(
+        owner=normalized_owner,
+        status=normalized_status,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+    return [record.to_response() for record in records]
+
+
+@app.post("/mission/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+async def create_mission_task(payload: TaskCreateRequest) -> TaskResponse:
+    record = tasks_repo.create_task(payload)
+    return record.to_response()
+
+
+@app.patch("/mission/tasks/{task_id}", response_model=TaskResponse)
+async def update_mission_task(task_id: str, payload: TaskUpdateRequest) -> TaskResponse:
+    record = tasks_repo.update_task(task_id, payload)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return record.to_response()
+
+
+@app.post("/mission/tasks/{task_id}/advance", response_model=TaskResponse)
+async def advance_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    idx = STATUS_SEQUENCE.index(current.status)
+    if idx >= len(STATUS_SEQUENCE) - 1:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already done")
+    record = tasks_repo.advance(task_id)
+    return record.to_response()
+
+
+@app.post("/mission/tasks/{task_id}/rewind", response_model=TaskResponse)
+async def rewind_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    idx = STATUS_SEQUENCE.index(current.status)
+    if idx <= 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Task already in backlog")
+    record = tasks_repo.rewind(task_id)
+    return record.to_response()
+
+
+@app.post("/mission/tasks/{task_id}/reassign", response_model=TaskResponse)
+async def reassign_task(task_id: str) -> TaskResponse:
+    current = tasks_repo.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    record = tasks_repo.reassign(task_id)
+    return record.to_response()
+
+
+@app.post("/mission/tasks/{task_id}/complete", response_model=TaskResponse)
+async def complete_task(task_id: str) -> TaskResponse:
+    record = tasks_repo.set_status(task_id, TaskStatus.done.value)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return record.to_response()
+
+
+@app.get("/mission/schedule", response_model=list[ScheduleResponse])
+async def mission_schedule(limit: int = Query(default=200, ge=1, le=500), offset: int = Query(default=0, ge=0)) -> list[ScheduleResponse]:
+    records = schedule_repo.list_events(limit=limit, offset=offset)
+    return [record.to_response() for record in records]
+
+
+@app.post("/mission/schedule", response_model=ScheduleResponse, status_code=status.HTTP_201_CREATED)
+async def create_schedule_event(payload: ScheduleCreateRequest) -> ScheduleResponse:
+    record = schedule_repo.create_event(payload)
+    return record.to_response()
+
+
+@app.patch("/mission/schedule/{event_id}", response_model=ScheduleResponse)
+async def update_schedule_event(event_id: str, payload: ScheduleUpdateRequest) -> ScheduleResponse:
+    record = schedule_repo.update_event(event_id, payload)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return record.to_response()
 
 
 @app.websocket("/ws")
