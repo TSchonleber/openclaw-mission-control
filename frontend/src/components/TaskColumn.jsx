@@ -13,6 +13,7 @@ const TaskColumn = ({ title, tasks, onAdvance, onRewind, onReassign, onComplete,
         <TaskCard
           key={task.id}
           task={task}
+          slaClock={slaClock}
           onAdvance={onAdvance}
           onRewind={onRewind}
           onReassign={onReassign}

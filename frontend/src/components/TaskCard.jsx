@@ -1,17 +1,29 @@
 import React from 'react'
-import { getOwnerClass, getStatusLabel, getSlaMeta } from '../config/taskConstants'
+import { getOwnerClass, getStatusLabel, getSlaMeta, getTaskDeadline } from '../config/taskConstants'
 import { formatUpdatedLabel } from '../utils/time'
 
-const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete }) => {
+const formatRemaining = minutes => {
+  if (minutes == null) return null
+  if (minutes <= 0) return 'Overdue'
+  if (minutes >= 120) {
+    const hours = Math.floor(minutes / 60)
+    const mins = Math.round(minutes % 60)
+    if (mins > 0) return `${hours}h ${mins}m left`
+    return `${hours}h left`
+  }
+  if (minutes === Infinity) return null
+  return `${Math.max(1, Math.round(minutes))}m left`
+}
+
+const TaskCard = ({ task, slaClock, onAdvance, onRewind, onReassign, onComplete, onDelete }) => {
   const ownerClass = getOwnerClass(task.owner)
   const statusCopy = getStatusLabel(task.status)
   const updatedLabel = formatUpdatedLabel(task.updatedAt)
   const isBlocker = Boolean(task.blocker || task.blockerFlag)
-  const slaMeta = getSlaMeta(task)
+  const slaMeta = getSlaMeta(task, slaClock)
   const hasSla = Boolean(slaMeta.slaMinutes)
-  const remainingLabel = slaMeta.remainingMinutes != null
-    ? `${Math.max(0, Math.round(slaMeta.remainingMinutes))}m left`
-    : null
+  const remainingLabel = formatRemaining(slaMeta.remainingMinutes)
+  const deadlineIso = getTaskDeadline(task, slaClock)
 
   const cardClass = `task-card sla-${slaMeta.slaStatus || 'ok'}`
 
@@ -28,8 +40,11 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
               </span>
             )}
             {hasSla && (
-              <span className={`pill sla sla-${slaMeta.slaStatus}`} title={remainingLabel ?? 'SLA active'}>
-                SLA {remainingLabel ?? `${slaMeta.slaMinutes}m`}
+              <span
+                className={`pill sla sla-${slaMeta.slaStatus}`}
+                title={deadlineIso ? `Due ${new Date(deadlineIso).toLocaleString()}` : 'SLA active'}
+              >
+                {remainingLabel || `SLA ${slaMeta.slaMinutes}m`}
               </span>
             )}
           </div>

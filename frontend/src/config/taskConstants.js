@@ -35,7 +35,7 @@ export const getOwnerClass = owner => OWNER_CLASS_MAP[owner] || 'owner-iris'
 export const getStatusLabel = status => STATUS_LABELS[status] || 'Queued'
 export const getDefaultSlaMinutes = status => SLA_DEFAULT_MINUTES[status] || null
 
-export const getSlaMeta = task => {
+export const getSlaMeta = (task, now = Date.now()) => {
   const explicitSla = typeof task.slaMinutes === 'number' ? task.slaMinutes : null
   const slaMinutes = explicitSla ?? getDefaultSlaMinutes(task.status)
   if (!slaMinutes || task.status === 'done') {
@@ -66,7 +66,7 @@ export const getSlaMeta = task => {
       slaStatus: 'ok'
     }
   }
-  const elapsedMinutes = (Date.now() - createdAt.getTime()) / 60000
+  const elapsedMinutes = (now - createdAt.getTime()) / 60000
   const warnThreshold = slaMinutes / 2
   let slaStatus = 'ok'
   if (elapsedMinutes >= slaMinutes) slaStatus = 'breach'
@@ -78,4 +78,13 @@ export const getSlaMeta = task => {
     remainingMinutes,
     slaStatus
   }
+}
+
+export const getTaskDeadline = (task, now = Date.now()) => {
+  const slaMinutes = typeof task.slaMinutes === 'number' ? task.slaMinutes : getDefaultSlaMinutes(task.status)
+  if (!slaMinutes) return null
+  const createdAt = task.createdAt ? new Date(task.createdAt) : null
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return null
+  const deadline = new Date(createdAt.getTime() + slaMinutes * 60000)
+  return deadline.getTime() >= now ? deadline.toISOString() : createdAt.toISOString()
 }

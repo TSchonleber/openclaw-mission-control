@@ -11,7 +11,7 @@ import avatarAster from './assets/avatars/aster.jpg'
 import avatarNara from './assets/avatars/nara.jpg'
 import avatarIris from './assets/avatars/iris.jpg'
 import avatarOsiris from './assets/avatars/osiris.jpg'
-import { OWNER_SEQUENCE, STATUS_SEQUENCE, getSlaMeta, getDefaultSlaMinutes } from './config/taskConstants'
+import { OWNER_SEQUENCE, STATUS_SEQUENCE, getSlaMeta, getDefaultSlaMinutes, getTaskDeadline } from './config/taskConstants'
 import {
   INITIAL_SCHEDULE,
   CALENDAR_STORAGE_KEY,
@@ -710,6 +710,8 @@ export default function App() {
   const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
   const [slaAlerts, setSlaAlerts] = useState([])
   const slaStatusRef = useRef(new Map())
+  const [slaClock, setSlaClock] = useState(Date.now())
+  const [autoArchiveDone, setAutoArchiveDone] = useState(true)
 
   const refreshTasks = useCallback(() => {
     if (!useTasksApi) return Promise.resolve()
@@ -723,6 +725,11 @@ export default function App() {
       .finally(() => setTasksLoading(false))
   }, [useTasksApi])
 
+  useEffect(() => {
+    const id = window.setInterval(() => setSlaClock(Date.now()), 60000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
   const boardOwners = useMemo(() => {
     const unique = new Set(OWNER_SEQUENCE)
@@ -730,11 +737,13 @@ export default function App() {
       if (task.owner) unique.add(task.owner)
     })
     return Array.from(unique)
-  }, [tasks])
+  }, [tasks, slaClock])
   const wsRef = useRef(null)
   const reconnectRef = useRef()
   const scrollRef = useRef()
   const textareaRef = useRef()
+  const reminderMapRef = useRef(new Map())
+  const autoIntakeProcessedRef = useRef(new Set())
 
   const connect = useCallback(() => {
     try {
@@ -1708,6 +1717,9 @@ const handleEnterHub = () => setHasEntered(true)
         <TaskBoardPage
           tasks={tasks}
           owners={boardOwners}
+          slaClock={slaClock}
+          autoArchiveDone={autoArchiveDone}
+          onToggleAutoArchive={setAutoArchiveDone}
           onAddTask={handleAddTask}
           onAdvance={handleAdvanceTask}
           onRewind={handleRewindTask}

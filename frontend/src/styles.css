@@ -2311,3 +2311,22 @@ button.ghost:hover {
   height: 28px;
   cursor: pointer;
 }
+
+
+.task-board-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 0;
+}
+
+.task-board-controls .toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.task-board-controls input {
+  accent-color: var(--accent-secondary);
+}

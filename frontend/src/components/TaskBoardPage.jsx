@@ -4,7 +4,11 @@ import TaskComposer from './TaskComposer'
 import TaskFilters from './TaskFilters'
 import { TASK_COLUMNS, getSlaMeta, DEFAULT_OWNERS } from '../config/taskConstants'
 
-const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassign, onComplete, onDelete, loading, error, onBack }) => {
+const TaskBoardPage = ({ tasks, owners, slaClock, autoArchiveDone, onToggleAutoArchive, onAddTask, onAdvance, onRewind, onReassign, onComplete, onDelete, loading, error, onBack }) => {
+
+  const handleAutoArchiveToggle = event => {
+    onToggleAutoArchive?.(event.target.checked)
+  }
   const ownerOptions = useMemo(() => (owners?.length ? owners : DEFAULT_OWNERS), [owners])
   const [ownerFilter, setOwnerFilter] = useState('All')
   const [search, setSearch] = useState('')
@@ -36,7 +40,7 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
 
   const blockedCount = useMemo(() => filteredTasks.filter(task => task.blockerFlag || task.blocker).length, [filteredTasks])
   const atRiskCount = useMemo(() => filteredTasks.filter(task => {
-    const meta = getSlaMeta(task)
+    const meta = getSlaMeta(task, slaClock)
     return meta.slaStatus === 'warn' || meta.slaStatus === 'breach'
   }).length, [filteredTasks])
 
@@ -75,6 +79,16 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
           </span>
         </div>
       </div>
+      <div className="task-board-controls">
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={Boolean(autoArchiveDone)}
+            onChange={handleAutoArchiveToggle}
+          />
+          <span>Auto-archive done tasks</span>
+        </label>
+      </div>
       <TaskComposer owners={ownerOptions} onAdd={onAddTask} />
       <TaskFilters
         owners={ownerOptions}
@@ -89,6 +103,7 @@ const TaskBoardPage = ({ tasks, owners, onAddTask, onAdvance, onRewind, onReassi
             key={column.key}
             title={column.label}
             tasks={filteredTasks.filter(task => task.status === column.key)}
+            slaClock={slaClock}
             onAdvance={index === TASK_COLUMNS.length - 1 ? null : onAdvance}
             onRewind={index === 0 ? null : onRewind}
             onReassign={onReassign}
