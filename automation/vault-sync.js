@@ -71,8 +71,16 @@ const parseTasksFromFile = async absolutePath => {
 
 const fetchTasks = async () => {
   const resp = await fetch(TASKS_URL, { headers })
-  if (!resp.ok) throw new Error(`Failed to fetch tasks: ${resp.status}`)
-  return resp.json()
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(text || `Failed to fetch tasks: ${resp.status}`)
+  }
+  const bodyText = await resp.text()
+  try {
+    return JSON.parse(bodyText)
+  } catch (err) {
+    throw new Error(`Failed to parse tasks JSON: ${err.message}`)
+  }
 }
 
 const updateTask = async (id, body) => {

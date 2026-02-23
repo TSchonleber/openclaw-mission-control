@@ -1,0 +1,2 @@
+{"type":"session","version":3,"id":"session-1","timestamp":"2026-02-23T09:00:00Z"}
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"[[reply_to_current]]Current focus:\n- [ ] Wire Obsidian ingest for tasks.\n- [x] Document source schemas.\n- Task: @Nara wire UI badge by Friday."}]},"timestamp":"2026-02-23T09:02:00Z"}
