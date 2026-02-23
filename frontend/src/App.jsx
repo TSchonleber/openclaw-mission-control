@@ -185,6 +185,24 @@ const INITIAL_TASKS = [
   }
 ]
 
+
+const normalizeTask = task => {
+  if (!task) return null;
+  const owner = task.owner || 'Iris'
+  const status = task.status || 'backlog'
+  const readOnly = Boolean(task.readOnly)
+  return {
+    ...task,
+    owner,
+    status,
+    readOnly,
+    source: task.source || (readOnly ? 'sync' : 'manual'),
+    lastSyncedAt: task.lastSyncedAt || null
+  }
+}
+
+const normalizeTaskList = list => (Array.isArray(list) ? list.map(normalizeTask).filter(Boolean) : [])
+
 const OPS_FEED_BASE = [
   { id: 'ops-1', title: 'Deploy command pack to Iris', route: 'codex', status: 'completed', duration: '42s', time: '07:02' },
   { id: 'ops-2', title: 'Refresh telemetry window', route: 'chat', status: 'dispatched', duration: '18s', time: '06:55' },
@@ -223,6 +241,28 @@ const CALENDAR_SCHEDULE = [
   { id: 'cal-5', label: 'Sprint sync', day: 'Fri', time: '13:00', color: 'calendar-gold', next: 'Fri • 13:00' },
   { id: 'cal-6', label: 'Ops stand-up', day: 'Thu', time: '09:00', color: 'calendar-blue' }
 ]
+
+
+const normalizeScheduleEvent = event => {
+  if (!event) return null
+  const owner = event.owner || event.agent || 'Unassigned'
+  const startAt = event.startAt || event.datetime || null
+  return {
+    ...event,
+    owner,
+    agent: event.agent || owner,
+    startAt,
+    datetime: event.datetime || startAt,
+    type: event.type || 'event',
+    readOnly: Boolean(event.readOnly),
+    source: event.source || null,
+    lastSyncedAt: event.lastSyncedAt || event.updatedAt || null,
+    notes: event.notes || event.description || undefined,
+    recurrence: event.recurrence || event.location || undefined
+  }
+}
+
+const normalizeScheduleList = list => (Array.isArray(list) ? list.map(normalizeScheduleEvent).filter(Boolean) : [])
 
 const safeParseJSON = (value, fallback = null) => {
   if (typeof value !== 'string') return fallback
@@ -694,11 +734,11 @@ export default function App() {
   const useScheduleApi = import.meta.env.VITE_USE_SCHEDULE_API === 'true'
   const useIntelApi = import.meta.env.VITE_USE_INTEL_API === 'true'
 
-  const [tasks, setTasks] = useState(() => (useTasksApi ? [] : getStoredTasks() ?? INITIAL_TASKS))
+  const [tasks, setTasks] = useState(() => (useTasksApi ? [] : normalizeTaskList(getStoredTasks() ?? INITIAL_TASKS)))
   const [tasksLoading, setTasksLoading] = useState(useTasksApi)
   const [tasksError, setTasksError] = useState(null)
 
-  const [schedule, setSchedule] = useState(() => getStoredSchedule() ?? INITIAL_SCHEDULE)
+  const [schedule, setSchedule] = useState(() => (useScheduleApi ? [] : normalizeScheduleList(getStoredSchedule() ?? INITIAL_SCHEDULE)))
   const [scheduleError, setScheduleError] = useState(null)
   const [scheduleLoading, setScheduleLoading] = useState(useScheduleApi)
 
@@ -868,8 +908,9 @@ export default function App() {
   }, [tasks, useTasksApi])
 
   useEffect(() => {
+    if (useScheduleApi) return
     persistSchedule(schedule)
-  }, [schedule])
+  }, [schedule, useScheduleApi])
 
   useEffect(() => {
     if (!useTasksApi) return undefined
@@ -884,7 +925,7 @@ export default function App() {
       .then(items => {
         if (ignore) return
         if (Array.isArray(items) && items.length) {
-          setSchedule(items)
+          setSchedule(normalizeScheduleList(items))
           setScheduleError(null)
         }
       })
@@ -1230,7 +1271,7 @@ export default function App() {
   const emptyConversation = messages.length === 0
   const disabled = !input.trim() || status === 'error' || status === 'offline'
 
-    useEffect(() => {
+  useEffect(() => {
     if (hasEntered && typeof window !== 'undefined') {
       try {
         window.sessionStorage.setItem('nara-hub-entered', '1')
@@ -1290,23 +1331,25 @@ const handleEnterHub = () => setHasEntered(true)
     }
 
     const createdAt = new Date().toISOString()
-    setTasks(prev => [
-      {
-        id: crypto.randomUUID(),
-        title: trimmedTitle,
-        owner: resolvedOwner,
-        status: 'backlog',
-        description: trimmedDescription,
-        createdAt,
-        updatedAt: getUpdateStamp(),
-        slaMinutes: getDefaultSlaMinutes('backlog')
-      },
-      ...prev
-    ])
+    const entry = normalizeTask({
+      id: crypto.randomUUID(),
+      title: trimmedTitle,
+      owner: resolvedOwner,
+      status: 'backlog',
+      description: trimmedDescription,
+      createdAt,
+      updatedAt: getUpdateStamp(),
+      slaMinutes: getDefaultSlaMinutes('backlog'),
+      readOnly: false,
+      source: 'manual'
+    })
+    setTasks(prev => [entry, ...prev])
   }, [getUpdateStamp, useTasksApi, refreshTasks])
 
 
   const handleDeleteScheduleItem = useCallback(id => {
+    const target = schedule.find(item => item.id === id)
+    if (!target || target.readOnly) return
     const confirmDelete = typeof window !== 'undefined'
       ? window.confirm('Remove this calendar entry?')
       : true
@@ -1321,14 +1364,14 @@ const handleEnterHub = () => setHasEntered(true)
       return
     }
     setSchedule(prev => prev.filter(item => item.id !== id))
-  }, [useScheduleApi])
+  }, [schedule, useScheduleApi])
 
   const handleAddScheduleItem = useCallback(({ title, agent, type, date, time, recurrence, notes }) => {
     const trimmedTitle = title?.trim()
     if (!trimmedTitle || !date) return
     const normalizedAgent = DEFAULT_AGENT_OPTIONS.includes(agent) ? agent : DEFAULT_AGENT_OPTIONS[0]
     const typeValues = SCHEDULE_TYPE_OPTIONS.map(option => option.value)
-    const normalizedType = typeValues.includes(type) ? type : SCHEDULE_TYPE_OPTIONS[0]?.value || 'task'
+    const normalizedType = typeValues.includes(type) ? type : SCHEDULE_TYPE_OPTIONS[0]?.value || 'event'
     const timePart = time && time.length ? time : '09:00'
     const timestamp = (() => {
       const candidate = new Date(`${date}T${timePart}`)
@@ -1336,22 +1379,34 @@ const handleEnterHub = () => setHasEntered(true)
       const fallback = new Date(date)
       return Number.isNaN(fallback.getTime()) ? new Date().toISOString() : fallback.toISOString()
     })()
-    const entry = {
+    const clientEntry = normalizeScheduleEvent({
       id: crypto.randomUUID(),
       title: trimmedTitle,
       agent: normalizedAgent,
+      owner: normalizedAgent,
       type: normalizedType,
       datetime: timestamp,
+      startAt: timestamp,
       recurrence: recurrence?.trim() || undefined,
       notes: notes?.trim() || undefined,
       createdBy: 'Iris',
-      createdAt: new Date().toISOString()
-    }
+      createdAt: new Date().toISOString(),
+      readOnly: false,
+      source: 'manual'
+    })
 
     if (useScheduleApi) {
-      createScheduleItem(entry)
+      const payload = {
+        title: trimmedTitle,
+        owner: normalizedAgent,
+        startAt: timestamp,
+        description: notes?.trim() || undefined,
+        location: recurrence?.trim() || undefined
+      }
+      createScheduleItem(payload)
         .then(serverItem => {
-          setSchedule(prev => [serverItem ?? entry, ...prev])
+          const normalized = serverItem ? normalizeScheduleEvent({ ...serverItem, type: normalizedType }) : clientEntry
+          setSchedule(prev => [normalized, ...prev])
           setScheduleError(null)
         })
         .catch(error => {
@@ -1360,12 +1415,12 @@ const handleEnterHub = () => setHasEntered(true)
       return
     }
 
-    setSchedule(prev => [entry, ...prev])
+    setSchedule(prev => [clientEntry, ...prev])
   }, [useScheduleApi])
 
   const handleEditScheduleItem = useCallback(id => {
     const target = schedule.find(item => item.id === id)
-    if (!target) return
+    if (!target || target.readOnly) return
     if (typeof window === 'undefined') return
     const promptValue = (label, fallback = '') => {
       const value = window.prompt(label, fallback)
@@ -1381,11 +1436,11 @@ const handleEnterHub = () => setHasEntered(true)
         : '09:00'
       const nextDate = promptValue('Update date (YYYY-MM-DD)', defaultDate)
       const nextTime = promptValue('Update time (HH:MM)', defaultTime)
-      const nextAgent = promptValue(`Update agent (${DEFAULT_AGENT_OPTIONS.join(', ')})`, target.agent)
+      const nextAgent = promptValue(`Update owner (${DEFAULT_AGENT_OPTIONS.join(', ')})`, target.agent || target.owner)
       const typeLabels = SCHEDULE_TYPE_OPTIONS.map(option => option.value).join(', ')
-      const nextType = promptValue(`Update type (${typeLabels})`, target.type)
+      const nextType = promptValue(`Update type (${typeLabels})`, target.type || 'event')
       const nextRecurrence = promptValue('Update recurrence (optional)', target.recurrence || '')
-      const nextNotes = promptValue('Update notes (optional)', target.notes || '')
+      const nextNotes = promptValue('Update notes (optional)', target.notes || target.description || '')
       const normalizedAgent = DEFAULT_AGENT_OPTIONS.includes(nextAgent) ? nextAgent : DEFAULT_AGENT_OPTIONS[0]
       const normalizedType = SCHEDULE_TYPE_OPTIONS.some(option => option.value === nextType)
         ? nextType
@@ -1395,30 +1450,43 @@ const handleEnterHub = () => setHasEntered(true)
         const candidate = new Date(`${nextDate}T${nextTime || '09:00'}`)
         return Number.isNaN(candidate.getTime()) ? target.datetime : candidate.toISOString()
       })()
-      const payload = {
+      const updates = {
         title: nextTitle || target.title,
         agent: normalizedAgent,
+        owner: normalizedAgent,
         type: normalizedType,
         datetime: timestamp,
         recurrence: nextRecurrence || undefined,
         notes: nextNotes || undefined
       }
       if (useScheduleApi) {
+        const payload = {
+          title: updates.title,
+          owner: normalizedAgent,
+          startAt: timestamp,
+          description: nextNotes || null,
+          location: nextRecurrence || null
+        }
         updateScheduleItem(id, payload)
           .then(serverItem => {
-            setSchedule(prev => prev.map(item => (item.id === id ? (serverItem ?? { ...item, ...payload }) : item)))
+            const normalized = serverItem
+              ? normalizeScheduleEvent({ ...serverItem, type: normalizedType })
+              : normalizeScheduleEvent({ ...target, ...updates })
+            setSchedule(prev => prev.map(item => (item.id === id ? normalized : item)))
             setScheduleError(null)
           })
           .catch(error => setScheduleError(error.message || 'Failed to update entry'))
         return
       }
-      setSchedule(prev => prev.map(item => (item.id === id ? { ...item, ...payload } : item)))
+      setSchedule(prev => prev.map(item => (item.id === id ? normalizeScheduleEvent({ ...item, ...updates }) : item)))
     } catch {
       // user cancelled one of the prompts
     }
   }, [schedule, useScheduleApi])
 
   const handleAdvanceTask = useCallback(id => {
+    const target = tasks.find(item => item.id === id)
+    if (target?.readOnly) return
     if (useTasksApi) {
       apiAdvanceTask(id)
         .then(() => refreshTasks())
@@ -1434,9 +1502,11 @@ const handleEnterHub = () => setHasEntered(true)
       if (!nextStatus) return task
       return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
     }))
-  }, [getUpdateStamp, useTasksApi, refreshTasks])
+  }, [getUpdateStamp, useTasksApi, refreshTasks, tasks])
 
   const handleRewindTask = useCallback(id => {
+    const target = tasks.find(item => item.id === id)
+    if (target?.readOnly) return
     if (useTasksApi) {
       apiRewindTask(id)
         .then(() => refreshTasks())
@@ -1451,11 +1521,12 @@ const handleEnterHub = () => setHasEntered(true)
       const nextStatus = STATUS_SEQUENCE[safeIndex - 1]
       return { ...task, status: nextStatus, updatedAt: getUpdateStamp() }
     }))
-  }, [getUpdateStamp, useTasksApi, refreshTasks])
+  }, [getUpdateStamp, useTasksApi, refreshTasks, tasks])
 
   const handleReassignTask = useCallback(id => {
+    const task = tasks.find(item => item.id === id)
+    if (task?.readOnly) return
     if (useTasksApi) {
-      const task = tasks.find(item => item.id === id)
       const currentIndex = task ? OWNER_SEQUENCE.indexOf(task.owner) : 0
       const safeIndex = currentIndex === -1 ? 0 : currentIndex
       const nextOwner = OWNER_SEQUENCE[(safeIndex + 1) % OWNER_SEQUENCE.length]
@@ -1464,16 +1535,18 @@ const handleEnterHub = () => setHasEntered(true)
         .catch(err => setTasksError(err.message || 'Failed to reassign task'))
       return
     }
-    setTasks(prev => prev.map(task => {
-      if (task.id !== id) return task
-      const currentIndex = OWNER_SEQUENCE.indexOf(task.owner)
+    setTasks(prev => prev.map(item => {
+      if (item.id !== id) return item
+      const currentIndex = OWNER_SEQUENCE.indexOf(item.owner)
       const safeIndex = currentIndex === -1 ? 0 : currentIndex
       const nextOwner = OWNER_SEQUENCE[(safeIndex + 1) % OWNER_SEQUENCE.length]
-      return { ...task, owner: nextOwner, updatedAt: getUpdateStamp() }
+      return { ...item, owner: nextOwner, updatedAt: getUpdateStamp() }
     }))
   }, [getUpdateStamp, useTasksApi, refreshTasks, tasks])
 
   const handleCompleteTask = useCallback(id => {
+    const target = tasks.find(item => item.id === id)
+    if (target?.readOnly) return
     if (useTasksApi) {
       apiCompleteTask(id)
         .then(() => refreshTasks())
@@ -1483,7 +1556,7 @@ const handleEnterHub = () => setHasEntered(true)
     setTasks(prev => prev.map(task => (
       task.id === id ? { ...task, status: 'done', updatedAt: getUpdateStamp() } : task
     )))
-  }, [getUpdateStamp, useTasksApi, refreshTasks])
+  }, [getUpdateStamp, useTasksApi, refreshTasks, tasks])
 
   const handleDeleteTask = useCallback(id => {
     const confirmDelete = typeof window !== 'undefined'

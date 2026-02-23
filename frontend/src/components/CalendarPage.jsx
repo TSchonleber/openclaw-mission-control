@@ -29,27 +29,35 @@ const typeLabelFromValue = (value, options) => options.find(option => option.val
 const DayEvents = ({ events, typeOptions, onDelete, onEdit }) => (
   <ul className="day-events">
     {events.length === 0 && <li className="calendar-empty">No items</li>}
-    {events.map(item => (
-      <li key={item.id} className="day-event-row">
-        <div>
-          <strong>{item.title}</strong>
-          <span>{item.agent} • {typeLabelFromValue(item.type, typeOptions)}</span>
-        </div>
-        <div className="event-meta">
-          <time>{formatTimeLabel(item.datetime)}</time>
-          {onEdit && (
-            <button type="button" className="event-edit" onClick={() => onEdit(item.id)} aria-label="Edit event">
-              ✎
-            </button>
-          )}
-          {onDelete && (
-            <button type="button" className="event-delete" onClick={() => onDelete(item.id)} aria-label="Delete event">
-              🗑
-            </button>
-          )}
-        </div>
-      </li>
-    ))}
+    {events.map(item => {
+      const owner = item.agent || item.owner || 'Unassigned'
+      const eventType = item.type || 'event'
+      const timestamp = item.datetime || item.startAt
+      const isReadOnly = Boolean(item.readOnly)
+      const sourceLabel = item.source ? `Synced from ${item.source}` : 'Synced event'
+      return (
+        <li key={item.id} className="day-event-row">
+          <div>
+            <strong>{item.title}</strong>
+            <span>{owner} • {typeLabelFromValue(eventType, typeOptions)}</span>
+            {isReadOnly && (<span className="pill source" title={sourceLabel}>Synced</span>)}
+          </div>
+          <div className="event-meta">
+            <time>{formatTimeLabel(timestamp)}</time>
+            {!isReadOnly && onEdit && (
+              <button type="button" className="event-edit" onClick={() => onEdit(item.id)} aria-label="Edit event">
+                ✎
+              </button>
+            )}
+            {!isReadOnly && onDelete && (
+              <button type="button" className="event-delete" onClick={() => onDelete(item.id)} aria-label="Delete event">
+                🗑
+              </button>
+            )}
+          </div>
+        </li>
+      )
+    })}
   </ul>
 )
 

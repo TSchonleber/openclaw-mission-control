@@ -24,8 +24,15 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
   const hasSla = Boolean(slaMeta.slaMinutes)
   const remainingLabel = formatRemaining(slaMeta.remainingMinutes)
   const deadlineIso = getTaskDeadline(task)
+  const isReadOnly = Boolean(task.readOnly)
+  const sourceName = task.source || (isReadOnly ? 'sync' : 'manual entry')
+  const syncLabel = task.lastSyncedAt ? formatUpdatedLabel(task.lastSyncedAt) : null
 
-  const cardClass = `task-card sla-${slaMeta.slaStatus || 'ok'}`
+  const cardClass = [
+    'task-card',
+    `sla-${slaMeta.slaStatus || 'ok'}`,
+    isReadOnly ? 'synced' : null
+  ].filter(Boolean).join(' ')
 
   return (
     <article className={cardClass}>
@@ -37,6 +44,11 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
             {isBlocker && (
               <span className="pill blocker" title={task.blockerReason || 'Flagged as blocker'}>
                 Blocker
+              </span>
+            )}
+            {isReadOnly && (
+              <span className="pill source" title={`Synced from ${sourceName}${syncLabel ? ` • ${syncLabel}` : ''}`}>
+                Synced
               </span>
             )}
             {hasSla && (
@@ -54,8 +66,11 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
       {task.description && <p>{task.description}</p>}
       <footer>
         <span className="task-updated">{updatedLabel}</span>
+        {syncLabel && isReadOnly && (
+          <span className="task-synced">Synced {syncLabel}</span>
+        )}
         <div className="task-actions">
-          {onRewind && (
+          {!isReadOnly && onRewind && (
             <button
               type="button"
               onClick={() => onRewind(task.id)}
@@ -65,7 +80,7 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
               ←
             </button>
           )}
-          {onAdvance && (
+          {!isReadOnly && onAdvance && (
             <button
               type="button"
               onClick={() => onAdvance(task.id)}
@@ -75,15 +90,17 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
               →
             </button>
           )}
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => onReassign(task.id)}
-            title="Cycle owner"
-          >
-            Swap owner
-          </button>
-          {onComplete && (
+          {!isReadOnly && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => onReassign(task.id)}
+              title="Cycle owner"
+            >
+              Swap owner
+            </button>
+          )}
+          {!isReadOnly && onComplete && (
             <button
               type="button"
               className="ghost complete"
@@ -94,7 +111,7 @@ const TaskCard = ({ task, onAdvance, onRewind, onReassign, onComplete, onDelete 
               ✓
             </button>
           )}
-          {onDelete && (
+          {!isReadOnly && onDelete && (
             <button
               type="button"
               className="ghost danger"
