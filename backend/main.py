@@ -30,6 +30,12 @@ from task_service import (
     TaskResponse,
     TaskUpdateRequest,
 )
+from schedule_service import (
+    ScheduleRepository,
+    ScheduleResponse,
+    ScheduleCreateRequest,
+    ScheduleUpdateRequest,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -46,6 +52,7 @@ telemetry_tracker = TelemetryTracker(window_minutes=30)
 command_log = CommandLog(max_entries=100)
 router = CodexRouter(telemetry_hook=telemetry_tracker.record)
 tasks_repo = TaskRepository()
+schedule_repo = ScheduleRepository()
 ACTIVE_CONNECTIONS: set[WebSocket] = set()
 
 
@@ -144,6 +151,26 @@ async def rewind_task(task_id: str) -> TaskResponse:
     return response
 
 
+
+
+@app.get("/mission/schedule", response_model=list[ScheduleResponse])
+async def mission_schedule(limit: int = Query(default=200, ge=1, le=500), offset: int = Query(default=0, ge=0)) -> List[ScheduleResponse]:
+    records = schedule_repo.list_events(limit=limit, offset=offset)
+    return [record.to_response() for record in records]
+
+
+@app.post("/mission/schedule", response_model=ScheduleResponse, status_code=status.HTTP_201_CREATED)
+async def create_schedule_event(payload: ScheduleCreateRequest) -> ScheduleResponse:
+    record = schedule_repo.create_event(payload)
+    return record.to_response()
+
+
+@app.patch("/mission/schedule/{event_id}", response_model=ScheduleResponse)
+async def update_schedule_event(event_id: str, payload: ScheduleUpdateRequest) -> ScheduleResponse:
+    record = schedule_repo.update_event(event_id, payload)
+    if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return record.to_response()
 @app.post("/mission/tasks/{task_id}/reassign", response_model=TaskResponse)
 async def reassign_task(task_id: str) -> TaskResponse:
     current = tasks_repo.get_task(task_id)
