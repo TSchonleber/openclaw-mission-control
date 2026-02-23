@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 from .chat import extract_tasks_from_sessions
-from .obsidian import extract_tasks as extract_obsidian_tasks
-from .schemas import IngestTask
+from .obsidian import extract_events as extract_obsidian_events, extract_tasks as extract_obsidian_tasks
+from .schemas import IngestEvent, IngestTask
 from schedule_service import ScheduleRepository
 from task_service import TaskRepository
 
@@ -24,6 +24,8 @@ def sync_sources(
     if obsidian_root:
         stats["tasks"]["processed"] += _upsert_tasks(tasks_repo, extract_obsidian_tasks(obsidian_root))
         stats["tasks"]["upserts"] = stats["tasks"]["processed"]
+        stats["events"]["processed"] += _upsert_events(schedule_repo, extract_obsidian_events(obsidian_root))
+        stats["events"]["upserts"] = stats["events"]["processed"]
 
     if chat_logs:
         stats["tasks"]["processed"] += _upsert_tasks(
@@ -32,7 +34,6 @@ def sync_sources(
         )
         stats["tasks"]["upserts"] = stats["tasks"]["processed"]
 
-    # Event ingestion pending once calendar front-matter stabilizes.
     return stats
 
 
@@ -40,5 +41,13 @@ def _upsert_tasks(tasks_repo: TaskRepository, iterator: Iterable[IngestTask]) ->
     count = 0
     for task in iterator:
         tasks_repo.upsert_from_ingest(task)
+        count += 1
+    return count
+
+
+def _upsert_events(schedule_repo: ScheduleRepository, iterator: Iterable[IngestEvent]) -> int:
+    count = 0
+    for event in iterator:
+        schedule_repo.upsert_from_ingest(event)
         count += 1
     return count

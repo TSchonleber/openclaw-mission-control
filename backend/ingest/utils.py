@@ -44,7 +44,11 @@ def hash_source_id(*parts: str) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
-def parse_datetime(text: str | None) -> Optional[datetime]:
+def parse_datetime(text: str | datetime | None) -> Optional[datetime]:
+    if text is None:
+        return None
+    if isinstance(text, datetime):
+        return text
     if not text:
         return None
     try:
