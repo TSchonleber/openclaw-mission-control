@@ -274,14 +274,15 @@ async def _dispatch_command(agent_id: str, target_agent: str, payload: CommandPa
         )
         await _broadcast({"type": "telemetry", "payload": telemetry.snapshot(), "ts": _now()})
 
-        content = response.get("message") or response.get("content")
+        payload_root = response.get("result") if isinstance(response.get("result"), dict) else response
+        content = payload_root.get("message") or payload_root.get("content")
         if not content:
-            payloads = response.get("payloads") or []
+            payloads = payload_root.get("payloads") or response.get("payloads") or []
             if payloads:
                 first = payloads[0] or {}
                 content = first.get("text") or first.get("content")
         if not content:
-            data = response.get("response") or {}
+            data = payload_root.get("response") or response.get("response") or {}
             content = data.get("message") or data.get("content") or ''
         message_payload = {
             "id": response.get("id") or command_id,
