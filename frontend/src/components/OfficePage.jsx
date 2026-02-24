@@ -7,6 +7,10 @@ import deskPc from '../assets/office2/desk-with-pc.png'
 import waterCooler from '../assets/office2/water-cooler.png'
 import plant from '../assets/office2/plant.png'
 import printer from '../assets/office2/printer.png'
+import coffeeMaker from '../assets/office2/coffee-maker.png'
+import sink from '../assets/office2/sink.png'
+import trash from '../assets/office2/Trash.png'
+import cabinet from '../assets/office2/cabinet.png'
 import chair from '../assets/office2/Chair.png'
 import partition1 from '../assets/office2/office-partitions-1.png'
 import partition2 from '../assets/office2/office-partitions-2.png'
@@ -57,12 +61,16 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
         <img className="office-prop watercooler" src={waterCooler} alt="watercooler" style={{ left: 40, top: 360 }} />
         <img className="office-prop plant" src={plant} alt="plant" style={{ left: 60, top: 320 }} />
         <img className="office-prop printer" src={printer} alt="printer" style={{ left: 480, top: 360 }} />
+        <img className="office-prop coffee" src={coffeeMaker} alt="coffee maker" style={{ left: 720, top: 360 }} />
+        <img className="office-prop sink" src={sink} alt="sink" style={{ left: 820, top: 360 }} />
+        <img className="office-prop trash" src={trash} alt="trash" style={{ left: 600, top: 360 }} />
+        <img className="office-prop cabinet" src={cabinet} alt="cabinet" style={{ left: 240, top: 360 }} />
 
         {coreSlots.map(slot => {
           const agent = core.find(item => item.id === slot.id)
           if (!agent) return null
           return (
-            <div key={slot.id} className="office-seat" style={{ left: slot.x, top: slot.y }}>
+            <div key={slot.id} className={`office-seat ${agent.status}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
               <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
@@ -74,7 +82,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
         {subs.map((agent, index) => {
           const slot = subSlots[index % subSlots.length]
           return (
-            <div key={agent.id} className="office-seat" style={{ left: slot.x, top: slot.y }}>
+            <div key={agent.id} className={`office-seat ${agent.status}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
               <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
