@@ -804,7 +804,16 @@ export default function App() {
       return { ...agent, status: active ? 'working' : 'idle' }
     })
   }, [agentActivity])
-const boardOwners = useMemo(() => {
+
+  const officeSubAgents = useMemo(() => [
+    { id: 'backend-fixer', name: 'Backend Fixer', tier: 'sub' },
+    { id: 'frontend-builder', name: 'Frontend Builder', tier: 'sub' },
+    { id: 'automation-engineer', name: 'Automation Engineer', tier: 'sub' },
+    { id: 'spec-writer', name: 'Spec Writer', tier: 'sub' },
+    { id: 'ui-stylist', name: 'UI Stylist', tier: 'sub' }
+  ], [])
+
+  const boardOwners = useMemo(() => {
     const unique = new Set(OWNER_SEQUENCE)
     tasks.forEach(task => {
       if (task.owner) unique.add(task.owner)
