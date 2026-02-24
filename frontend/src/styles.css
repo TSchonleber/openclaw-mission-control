@@ -2768,16 +2768,21 @@ button.ghost:hover {
   50% { transform: translateY(-4px); }
 }
 
-.office-seat.working.path-aster, .office-seat.demo.path-aster { animation: walk-aster 8s ease-in-out infinite; }
-.office-seat.working.path-iris, .office-seat.demo.path-iris { animation: walk-iris 9s ease-in-out infinite; }
-.office-seat.working.path-nara, .office-seat.demo.path-nara { animation: walk-nara 7.5s ease-in-out infinite; }
-.office-seat.working.path-osiris, .office-seat.demo.path-osiris { animation: walk-osiris 8.5s ease-in-out infinite; }
+  30% { transform: translate(14px, 0); }
+  60% { transform: translate(14px, 12px); }
+  100% { transform: translate(0, 0); }
+}
 
-.office-seat.working.path-sub-0, .office-seat.demo.path-sub-0 { animation: walk-sub-0 6.5s ease-in-out infinite; }
-.office-seat.working.path-sub-1, .office-seat.demo.path-sub-1 { animation: walk-sub-1 7s ease-in-out infinite; }
-.office-seat.working.path-sub-2, .office-seat.demo.path-sub-2 { animation: walk-sub-2 7.5s ease-in-out infinite; }
-.office-seat.working.path-sub-3, .office-seat.demo.path-sub-3 { animation: walk-sub-3 6.8s ease-in-out infinite; }
-.office-seat.working.path-sub-4, .office-seat.demo.path-sub-4 { animation: walk-sub-4 7.2s ease-in-out infinite; }
+.office-seat.path-aster .sprite.working, .office-seat.path-aster .sprite.demo { animation: walk-aster 8s ease-in-out infinite; }
+.office-seat.path-iris .sprite.working, .office-seat.path-iris .sprite.demo { animation: walk-iris 9s ease-in-out infinite; }
+.office-seat.path-nara .sprite.working, .office-seat.path-nara .sprite.demo { animation: walk-nara 7.5s ease-in-out infinite; }
+.office-seat.path-osiris .sprite.working, .office-seat.path-osiris .sprite.demo { animation: walk-osiris 8.5s ease-in-out infinite; }
+
+.office-seat.path-sub-0 .sprite.working, .office-seat.path-sub-0 .sprite.demo { animation: walk-sub-0 6.5s ease-in-out infinite; }
+.office-seat.path-sub-1 .sprite.working, .office-seat.path-sub-1 .sprite.demo { animation: walk-sub-1 7s ease-in-out infinite; }
+.office-seat.path-sub-2 .sprite.working, .office-seat.path-sub-2 .sprite.demo { animation: walk-sub-2 7.5s ease-in-out infinite; }
+.office-seat.path-sub-3 .sprite.working, .office-seat.path-sub-3 .sprite.demo { animation: walk-sub-3 6.8s ease-in-out infinite; }
+.office-seat.path-sub-4 .sprite.working, .office-seat.path-sub-4 .sprite.demo { animation: walk-sub-4 7.2s ease-in-out infinite; }
 
 @keyframes walk-aster {
   0% { transform: translate(0, 0); }
