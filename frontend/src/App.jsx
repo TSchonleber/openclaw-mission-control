@@ -5,6 +5,7 @@ import CommandLogPanel from './components/CommandLogPanel'
 import OpsFeed from './components/OpsFeed'
 import MemoryStream from './components/MemoryStream'
 import MemoryBoardPage from './components/MemoryBoardPage'
+import TeamStructurePage from './components/TeamStructurePage'
 import CalendarPreview from './components/CalendarPreview'
 import TaskBoardPage from './components/TaskBoardPage'
 import CalendarPage from './components/CalendarPage'
@@ -349,7 +350,8 @@ const NAV_SECTIONS = [
   { label: 'Dashboard', key: 'dashboard' },
   { label: 'Tasks', key: 'tasks' },
   { label: 'Calendar', key: 'calendar' },
-  { label: 'Memory', key: 'memory' }
+  { label: 'Memory', key: 'memory' },
+  { label: 'Team', key: 'team' }
 ]
 
 const AGENT_PROFILES = [
@@ -1620,7 +1622,7 @@ const handleEnterHub = () => setHasEntered(true)
   }, [useTasksApi, refreshTasks])
 
   const handleNavigate = useCallback(view => {
-    const allowed = ['dashboard', 'tasks', 'calendar', 'memory']
+    const allowed = ['dashboard', 'tasks', 'calendar', 'memory', 'team']
     setActiveView(allowed.includes(view) ? view : 'dashboard')
   }, [])
 
@@ -1865,6 +1867,10 @@ const handleEnterHub = () => setHasEntered(true)
           onSearch={query => fetchMemoryIndex({ q: query, limit: 200 }).then(data => setMemoryDocs(data.entries || [])).catch(err => setMemoryDocsError(err.message || 'Failed to load memory vault'))}
           onBack={() => handleNavigate('dashboard')}
         />
+      )}
+
+      {activeView === 'team' && (
+        <TeamStructurePage onBack={() => handleNavigate('dashboard')} />
       )}
     </div>
   )

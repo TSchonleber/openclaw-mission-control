@@ -2404,3 +2404,50 @@ button.ghost:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.team-structure-page {
+  padding: 24px 28px 40px;
+}
+
+.team-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.team-group {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(8, 10, 16, 0.6);
+}
+
+.team-group h3 {
+  margin-bottom: 12px;
+}
+
+.team-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.team-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(5, 7, 13, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-card span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.team-card p {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
