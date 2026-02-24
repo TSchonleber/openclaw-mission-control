@@ -75,7 +75,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
           const agent = core.find(item => item.id === slot.id)
           if (!agent) return null
           return (
-            <div key={slot.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ left: slot.x, top: slot.y }}>
+            <div key={slot.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""} path-${agent.id}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
               <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
@@ -86,8 +86,9 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
 
         {subs.map((agent, index) => {
           const slot = subSlots[index % subSlots.length]
+          const pathClass = `path-sub-${index % subSlots.length}`
           return (
-            <div key={agent.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ left: slot.x, top: slot.y }}>
+            <div key={agent.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""} path-${agent.id}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
               <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
