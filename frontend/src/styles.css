@@ -2641,6 +2641,7 @@ button.ghost:hover {
   100% { width: 20%; }
 }
 
+
 .pixel-office {
   padding: 28px 32px 48px;
 }
@@ -2679,39 +2680,63 @@ button.ghost:hover {
 }
 
 .office-map {
-  background: repeating-conic-gradient(from 0deg, rgba(20, 24, 32, 0.9) 0 25%, rgba(12, 14, 20, 0.9) 0 50%) 50% / 60px 60px;
+  background: repeating-linear-gradient(90deg, rgba(18, 22, 30, 0.9) 0 48px, rgba(12, 15, 22, 0.9) 48px 96px);
   border-radius: 20px;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  gap: 16px;
 }
 
 .private-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
 }
 
 .private-office {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px;
   background: rgba(8, 10, 16, 0.75);
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .office-door {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .office-desk {
   height: 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.office-props {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.prop {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.prop.watercooler {
+  background: linear-gradient(180deg, rgba(120, 200, 255, 0.6), rgba(50, 90, 120, 0.7));
+}
+
+.prop.plant {
+  background: radial-gradient(circle at 50% 40%, rgba(70, 200, 120, 0.8), rgba(20, 80, 40, 0.7));
+}
+
+.prop.table {
+  background: rgba(140, 120, 90, 0.6);
 }
 
 .main-floor {
@@ -2723,16 +2748,16 @@ button.ghost:hover {
 .open-desk {
   border: 1px dashed rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  padding: 12px;
+  padding: 10px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
   background: rgba(6, 8, 14, 0.65);
 }
 
 .desk {
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .agent-sprite {
@@ -2744,8 +2769,8 @@ button.ghost:hover {
 }
 
 .agent-sprite .sprite {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   background: #6ee0ff;
   border-radius: 4px;
   box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2);

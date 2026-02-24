@@ -1,17 +1,14 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 
 const OfficePage = ({ agents, subagents, activity, onBack }) => {
-  const coreAgents = useMemo(() => agents.filter(agent => agent.tier === 'core'), [agents])
-  const subAgents = useMemo(() => subagents || agents.filter(agent => agent.tier === 'sub'), [agents, subagents])
-
   const withStatus = list => list.map(agent => {
     const last = activity[agent.id]
     const active = last && Date.now() - last < 5 * 60 * 1000
     return { ...agent, status: active ? 'working' : 'idle' }
   })
 
-  const core = withStatus(coreAgents)
-  const subs = withStatus(subAgents)
+  const core = withStatus(agents.filter(a => a.tier === 'core'))
+  const subs = withStatus(subagents)
 
   return (
     <div className="office-page pixel-office">
@@ -40,6 +37,12 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="office-props">
+          <div className="prop watercooler" />
+          <div className="prop plant" />
+          <div className="prop table" />
         </div>
 
         <div className="office-row main-floor">
