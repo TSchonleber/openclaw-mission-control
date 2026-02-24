@@ -51,10 +51,10 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
         <span className="legend idle">Idle</span>
       </div>
 
-      <div className="office-map">
+      <div className="office-map office-background">
         <img className="office-prop partition" src={partition1} alt="partition" style={{ left: 40, top: 20 }} />
         <img className="office-prop partition" src={partition2} alt="partition" style={{ left: 520, top: 20 }} />
-        <img className="office-prop watercooler" src={waterCooler} alt="watercooler" style={{ left: 920, top: 320 }} />
+        <img className="office-prop watercooler" src={waterCooler} alt="watercooler" style={{ left: 40, top: 360 }} />
         <img className="office-prop plant" src={plant} alt="plant" style={{ left: 60, top: 320 }} />
         <img className="office-prop printer" src={printer} alt="printer" style={{ left: 480, top: 360 }} />
 
