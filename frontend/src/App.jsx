@@ -793,10 +793,10 @@ export default function App() {
   const officeAgents = useMemo(() => {
     const now = Date.now()
     const list = [
-      { id: 'aster', name: 'Aster', title: 'Front Door / Routing', avatar: avatarAster },
-      { id: 'iris', name: 'Iris', title: 'Backend / Integrations', avatar: avatarIris },
-      { id: 'nara', name: 'Nara', title: 'Frontend / UX', avatar: avatarNara },
-      { id: 'osiris', name: 'Osiris', title: 'Systems / Memory', avatar: avatarOsiris }
+      { id: 'aster', name: 'Aster', title: 'Front Door / Routing', avatar: avatarAster, tier: 'core' },
+      { id: 'iris', name: 'Iris', title: 'Backend / Integrations', avatar: avatarIris, tier: 'core' },
+      { id: 'nara', name: 'Nara', title: 'Frontend / UX', avatar: avatarNara, tier: 'core' },
+      { id: 'osiris', name: 'Osiris', title: 'Systems / Memory', avatar: avatarOsiris, tier: 'core' }
     ]
     return list.map(agent => {
       const last = agentActivity[agent.id]
