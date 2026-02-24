@@ -30,7 +30,7 @@ def write_entry(agent: str) -> None:
     file_path = DREAMS_DIR / f'{agent.title()} Dream Journal.md'
     date_label = datetime.now().strftime('%Y-%m-%d %H:%M')
     prompt = (
-        f"Write a vivid dream journal entry (2-4 sentences) for {agent.title()} "
+        f"Write a vivid dream journal entry (6+ paragraphs) for {agent.title()} "
         f"with a surreal, imaginative tone. Timestamp: {date_label}."
     )
     try:
