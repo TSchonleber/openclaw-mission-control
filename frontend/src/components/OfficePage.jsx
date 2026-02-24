@@ -78,7 +78,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
             <div key={slot.id} className={`office-seat ${agent.status} path-${agent.id}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
-              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""} walk-${agent.id}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
               <span className="sprite-label">{agent.name}</span>
             </div>
           )
@@ -91,7 +91,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
             <div key={agent.id} className={`office-seat ${agent.status} ${pathClass}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
-              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""} ${pathClass}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
               <span className="sprite-label">{agent.name}</span>
             </div>
           )
