@@ -1896,7 +1896,7 @@ const handleEnterHub = () => setHasEntered(true)
       )}
 
       {activeView === 'office' && (
-        <OfficePage agents={officeAgents} onBack={() => handleNavigate('dashboard')} />
+        <OfficePage agents={officeAgents} subagents={officeSubAgents} activity={agentActivity} onBack={() => handleNavigate('dashboard')} />
       )}
     </div>
   )

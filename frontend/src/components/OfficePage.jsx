@@ -1,35 +1,61 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
-const OfficePage = ({ agents, onBack }) => (
-  <div className="office-page">
-    <header className="task-board-header">
-      <div>
-        <h1>Digital Office</h1>
-        <p>Live status view of every agent workspace.</p>
+const OfficePage = ({ agents, subagents, activity, onBack }) => {
+  const coreAgents = useMemo(() => agents.filter(agent => agent.tier === 'core'), [agents])
+  const subAgents = useMemo(() => subagents || agents.filter(agent => agent.tier === 'sub'), [agents, subagents])
+
+  const withStatus = list => list.map(agent => {
+    const last = activity[agent.id]
+    const active = last && Date.now() - last < 5 * 60 * 1000
+    return { ...agent, status: active ? 'working' : 'idle' }
+  })
+
+  const core = withStatus(coreAgents)
+  const subs = withStatus(subAgents)
+
+  return (
+    <div className="office-page pixel-office">
+      <header className="task-board-header">
+        <div>
+          <h1>The Office</h1>
+          <p>Live pixel view of the crew at work.</p>
+        </div>
+        <button type="button" className="ghost" onClick={onBack}>← Back to dashboard</button>
+      </header>
+
+      <div className="office-legend">
+        <span className="legend working">Working</span>
+        <span className="legend idle">Idle</span>
       </div>
-      <button type="button" className="ghost" onClick={onBack}>← Back to dashboard</button>
-    </header>
 
-    <div className="office-grid">
-      {agents.map(agent => (
-        <section key={agent.id} className={`office-card ${agent.status}`}>
-          <div className="office-card-header">
-            <img src={agent.avatar} alt={agent.name} className="office-avatar" />
-            <div>
-              <strong>{agent.name}</strong>
-              <span>{agent.title}</span>
+      <div className="office-map">
+        <div className="office-row private-row">
+          {core.map(agent => (
+            <div key={agent.id} className="private-office">
+              <div className="office-door" />
+              <div className="office-desk" />
+              <div className={`agent-sprite ${agent.status}`}>
+                <div className="sprite" />
+                <span>{agent.name}</span>
+              </div>
             </div>
-            <span className={`status-pill ${agent.status}`}>{agent.status}</span>
-          </div>
-          <div className="office-workspace">
-            <div className={`office-monitor ${agent.status}`} />
-            <div className="office-desk" />
-            <div className={`office-activity ${agent.status}`} />
-          </div>
-        </section>
-      ))}
+          ))}
+        </div>
+
+        <div className="office-row main-floor">
+          {subs.map(agent => (
+            <div key={agent.id} className="open-desk">
+              <div className="desk" />
+              <div className={`agent-sprite ${agent.status}`}>
+                <div className="sprite" />
+                <span>{agent.name}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 export default OfficePage
