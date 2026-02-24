@@ -764,6 +764,9 @@ export default function App() {
   const [memoryData, setMemoryData] = useState(() => (useIntelApi ? [] : MEMORY_STREAM_ENTRIES))
   const [memoryError, setMemoryError] = useState(null)
   const [memoryLoading, setMemoryLoading] = useState(useIntelApi)
+  const [memoryDocs, setMemoryDocs] = useState([])
+  const [memoryDocsLoading, setMemoryDocsLoading] = useState(useIntelApi)
+  const [memoryDocsError, setMemoryDocsError] = useState(null)
   const [slaAlerts, setSlaAlerts] = useState([])
   const slaStatusRef = useRef(new Map())
   const [autoArchiveDone, setAutoArchiveDone] = useState(true)
@@ -1023,6 +1026,34 @@ export default function App() {
     return () => {
       ignore = true
       if (timer) window.clearTimeout(timer)
+    }
+  }, [useIntelApi])
+
+  useEffect(() => {
+    if (!useIntelApi) return undefined
+    let ignore = false
+    const load = () => {
+      setMemoryDocsLoading(true)
+      fetchMemoryIndex({ limit: 200 })
+        .then(data => {
+          if (ignore) return
+          setMemoryDocs(data.entries || [])
+          setMemoryDocsError(null)
+        })
+        .catch(error => {
+          if (!ignore) {
+            setMemoryDocsError(error.message || 'Failed to load memory vault')
+          }
+        })
+        .finally(() => {
+          if (!ignore) {
+            setMemoryDocsLoading(false)
+          }
+        })
+    }
+    load()
+    return () => {
+      ignore = true
     }
   }, [useIntelApi])
 
@@ -1831,7 +1862,7 @@ const handleEnterHub = () => setHasEntered(true)
           entries={memoryDocs}
           loading={memoryDocsLoading}
           error={memoryDocsError}
-          onSearch={query => refreshMemoryDocs({ q: query })}
+          onSearch={query => fetchMemoryIndex({ q: query, limit: 200 }).then(data => setMemoryDocs(data.entries || [])).catch(err => setMemoryDocsError(err.message || 'Failed to load memory vault'))}
           onBack={() => handleNavigate('dashboard')}
         />
       )}
