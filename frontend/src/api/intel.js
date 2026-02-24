@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_INTEL_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''
+const NGROK_HEADER = API_BASE.includes('ngrok-free') ? { 'ngrok-skip-browser-warning': 'true' } : {}
 
 const buildUrl = path => `${API_BASE}${path}`
 
@@ -15,7 +16,7 @@ export const fetchOpsFeed = async ({ limit = 50, status } = {}) => {
   if (limit) params.set('limit', limit)
   if (status) params.set('status', status)
   const query = params.toString() ? `?${params.toString()}` : ''
-  const response = await fetch(buildUrl(`/intel/ops-feed${query}`))
+  const response = await fetch(buildUrl(`/intel/ops-feed${query}`), { headers: NGROK_HEADER })
   return handleResponse(response)
 }
 
@@ -26,7 +27,8 @@ export const fetchMemoryStream = async ({ limit = 20, type } = {}) => {
   const query = params.toString() ? `?${params.toString()}` : ''
   const response = await fetch(buildUrl(`/intel/memory${query}`), {
     headers: {
-      Accept: 'application/json'
+      Accept: 'application/json',
+      ...NGROK_HEADER
     }
   })
   return handleResponse(response)
@@ -38,6 +40,6 @@ export const fetchMemoryIndex = async ({ q, agent, limit = 200 } = {}) => {
   if (agent) params.set('agent', agent)
   if (limit) params.set('limit', limit)
   const query = params.toString() ? `?${params.toString()}` : ''
-  const response = await fetch(buildUrl(`/intel/memory${query}`), { headers: { Accept: 'application/json' } })
+  const response = await fetch(buildUrl(`/intel/memory${query}`), { headers: { Accept: 'application/json', ...NGROK_HEADER } })
   return handleResponse(response)
 }
