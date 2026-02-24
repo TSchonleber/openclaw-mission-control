@@ -6,6 +6,7 @@ import OpsFeed from './components/OpsFeed'
 import MemoryStream from './components/MemoryStream'
 import MemoryBoardPage from './components/MemoryBoardPage'
 import TeamStructurePage from './components/TeamStructurePage'
+import OfficePage from './components/OfficePage'
 import CalendarPreview from './components/CalendarPreview'
 import TaskBoardPage from './components/TaskBoardPage'
 import CalendarPage from './components/CalendarPage'
@@ -351,7 +352,8 @@ const NAV_SECTIONS = [
   { label: 'Tasks', key: 'tasks' },
   { label: 'Calendar', key: 'calendar' },
   { label: 'Memory', key: 'memory' },
-  { label: 'Team', key: 'team' }
+  { label: 'Team', key: 'team' },
+  { label: 'Office', key: 'office' }
 ]
 
 const AGENT_PROFILES = [
@@ -770,6 +772,7 @@ export default function App() {
   const [memoryDocsLoading, setMemoryDocsLoading] = useState(useIntelApi)
   const [memoryDocsError, setMemoryDocsError] = useState(null)
   const [slaAlerts, setSlaAlerts] = useState([])
+  const [agentActivity, setAgentActivity] = useState({})
   const slaStatusRef = useRef(new Map())
   const [autoArchiveDone, setAutoArchiveDone] = useState(true)
 
@@ -786,7 +789,22 @@ export default function App() {
   }, [useTasksApi])
 
   const personaState = useMemo(() => personaOverrides[routePref] || [], [personaOverrides, routePref])
-  const boardOwners = useMemo(() => {
+  
+  const officeAgents = useMemo(() => {
+    const now = Date.now()
+    const list = [
+      { id: 'aster', name: 'Aster', title: 'Front Door / Routing', avatar: avatarAster },
+      { id: 'iris', name: 'Iris', title: 'Backend / Integrations', avatar: avatarIris },
+      { id: 'nara', name: 'Nara', title: 'Frontend / UX', avatar: avatarNara },
+      { id: 'osiris', name: 'Osiris', title: 'Systems / Memory', avatar: avatarOsiris }
+    ]
+    return list.map(agent => {
+      const last = agentActivity[agent.id]
+      const active = last && now - last < 5 * 60 * 1000
+      return { ...agent, status: active ? 'working' : 'idle' }
+    })
+  }, [agentActivity])
+const boardOwners = useMemo(() => {
     const unique = new Set(OWNER_SEQUENCE)
     tasks.forEach(task => {
       if (task.owner) unique.add(task.owner)
@@ -830,6 +848,10 @@ export default function App() {
         if (payload && payload.type === 'command_log') {
           const entry = payload.entry || payload.payload || payload
           dispatchCommandLog({ type: 'UPSERT', entry })
+          const route = (entry.route || entry.agent || '').toLowerCase()
+          if (route) {
+            setAgentActivity(prev => ({ ...prev, [route]: Date.now() }))
+          }
           setCommandLogLoading(false)
           setCommandLogError(null)
           return
@@ -1622,7 +1644,7 @@ const handleEnterHub = () => setHasEntered(true)
   }, [useTasksApi, refreshTasks])
 
   const handleNavigate = useCallback(view => {
-    const allowed = ['dashboard', 'tasks', 'calendar', 'memory', 'team']
+    const allowed = ['dashboard', 'tasks', 'calendar', 'memory', 'team', 'office']
     setActiveView(allowed.includes(view) ? view : 'dashboard')
   }, [])
 
@@ -1871,6 +1893,10 @@ const handleEnterHub = () => setHasEntered(true)
 
       {activeView === 'team' && (
         <TeamStructurePage onBack={() => handleNavigate('dashboard')} />
+      )}
+
+      {activeView === 'office' && (
+        <OfficePage agents={officeAgents} onBack={() => handleNavigate('dashboard')} />
       )}
     </div>
   )
