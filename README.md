@@ -81,5 +81,5 @@ python dream_journal.py
 ```
 
 ---
-
+You will need to clean up some of this and optimize it for your setup like agent name placeholders I have in here etc.
 **Goal:** This repo is designed to be a clean, public demo of a working agent command center.
