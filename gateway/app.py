@@ -58,6 +58,32 @@ connected_clients: Set[WebSocket] = set()
 
 
 
+
+
+def _should_include_memory(path: Path) -> bool:
+    name = path.name.lower()
+    if name in {"calendar.md", "index.md"}:
+        return False
+    if path.match('**/systems/**'):
+        return False
+    if path.match('**/projects/**'):
+        return False
+    if path.match('**/collab/**'):
+        return False
+    if path.match('**/people/**'):
+        return False
+    if path.match('**/agents/**'):
+        return True
+    if path.match('**/memory banks/**'):
+        return True
+    if path.match('**/dreams/**'):
+        return True
+    if name == 'memory.md':
+        return True
+    if path.match('**/memory/*.md'):
+        return True
+    return False
+
 def _read_memory_docs(query: str | None = None, agent: str | None = None, limit: int = 200) -> list[dict]:
     docs: list[dict] = []
     query_lower = query.lower() if query else None
@@ -72,7 +98,8 @@ def _read_memory_docs(query: str | None = None, agent: str | None = None, limit:
             first_line = content.splitlines()[0].lstrip('#').strip()
             if first_line:
                 title = first_line
-        summary = ' '.join([line.strip() for line in content.splitlines() if line.strip()][:4])
+        summary_lines = [line.strip() for line in content.splitlines() if line.strip() and not line.startswith('#')][:6]
+        summary = ' '.join(summary_lines)
         blob = f"{title} {summary} {content}".lower()
         if query_lower and query_lower not in blob:
             return
@@ -90,11 +117,15 @@ def _read_memory_docs(query: str | None = None, agent: str | None = None, limit:
     # Obsidian vault
     if MEMORY_VAULT.exists():
         for md in MEMORY_VAULT.rglob('*.md'):
+            if not _should_include_memory(md):
+                continue
             agent_name = None
             if 'agents' in md.parts:
                 agent_name = md.stem.title()
             elif 'Memory Banks' in md.parts:
                 agent_name = md.stem.replace(' Memory Bank', '')
+            elif 'Dreams' in md.parts:
+                agent_name = md.stem.replace(' Dream Journal', '')
             add_doc(md, 'obsidian', agent_name)
 
     # OpenClaw workspaces

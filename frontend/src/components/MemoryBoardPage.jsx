@@ -30,8 +30,10 @@ const MemoryBoardPage = ({ entries, loading, error, onSearch, onBack }) => {
       {error && <p className="error-text">{error}</p>}
       {loading && <p className="muted-text">Syncing memories…</p>}
       <div className="memory-board-controls">
+        <div className="memory-controls-group">
         <input
           type="search"
+          className="memory-search"
           placeholder="Search memories"
           value={query}
           onChange={e => {
@@ -44,6 +46,7 @@ const MemoryBoardPage = ({ entries, loading, error, onSearch, onBack }) => {
             <option key={agent} value={agent}>{agent}</option>
           ))}
         </select>
+        </div>
       </div>
       <div className="memory-board-grid">
         {filtered.map(entry => (
@@ -54,7 +57,7 @@ const MemoryBoardPage = ({ entries, loading, error, onSearch, onBack }) => {
             </div>
             <h3>{entry.title}</h3>
             <p>{entry.summary}</p>
-            <code>{entry.path}</code>
+            <span className="memory-path" title={entry.path}>{entry.path}</span>
           </article>
         ))}
       </div>
