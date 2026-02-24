@@ -348,7 +348,8 @@ const DEFAULT_DIRECTIVES = [
 const NAV_SECTIONS = [
   { label: 'Dashboard', key: 'dashboard' },
   { label: 'Tasks', key: 'tasks' },
-  { label: 'Calendar', key: 'calendar' }
+  { label: 'Calendar', key: 'calendar' },
+  { label: 'Memory', key: 'memory' }
 ]
 
 const AGENT_PROFILES = [
