@@ -1,6 +1,6 @@
 # Hub Gateway Service
 
-Bridges the Nara Hub frontend to live OpenClaw agents (Aster, Nara, Iris, Osiris).
+Bridges the Mission Control frontend to live OpenClaw agents.
 
 ## Features
 
