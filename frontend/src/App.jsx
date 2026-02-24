@@ -1825,6 +1825,16 @@ const handleEnterHub = () => setHasEntered(true)
           onBack={() => handleNavigate('dashboard')}
         />
       )}
+
+      {activeView === 'memory' && (
+        <MemoryBoardPage
+          entries={memoryDocs}
+          loading={memoryDocsLoading}
+          error={memoryDocsError}
+          onSearch={query => refreshMemoryDocs({ q: query })}
+          onBack={() => handleNavigate('dashboard')}
+        />
+      )}
     </div>
   )
 }
