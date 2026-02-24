@@ -31,3 +31,13 @@ export const fetchMemoryStream = async ({ limit = 20, type } = {}) => {
   })
   return handleResponse(response)
 }
+
+export const fetchMemoryIndex = async ({ q, agent, limit = 200 } = {}) => {
+  const params = new URLSearchParams()
+  if (q) params.set('q', q)
+  if (agent) params.set('agent', agent)
+  if (limit) params.set('limit', limit)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  const response = await fetch(buildUrl(`/intel/memory${query}`), { headers: { Accept: 'application/json' } })
+  return handleResponse(response)
+}

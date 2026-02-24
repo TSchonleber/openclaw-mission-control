@@ -40,6 +40,10 @@ app.add_middleware(
 
 command_log = CommandLog(max_entries=150)
 telemetry = TelemetryTracker(window_minutes=30)
+
+MEMORY_VAULT = Path('/Users/r4vager/Documents/Agent Memory')
+OPENCLAW_ROOT = Path('/Users/r4vager/.openclaw')
+WORKSPACE_AGENTS = ['iris', 'aster', 'nara', 'osiris']
 tasks_repo = TaskRepository()
 schedule_repo = ScheduleRepository()
 ROUTE_MAP = {
@@ -51,6 +55,62 @@ ROUTE_MAP = {
 messages: List[Dict[str, Any]] = []
 connected_clients: Set[WebSocket] = set()
 
+
+
+
+def _read_memory_docs(query: str | None = None, agent: str | None = None, limit: int = 200) -> list[dict]:
+    docs: list[dict] = []
+    query_lower = query.lower() if query else None
+
+    def add_doc(path: Path, source: str, agent_name: str | None = None):
+        try:
+            content = path.read_text(encoding='utf-8')
+        except Exception:
+            return
+        title = path.stem.replace('-', ' ').title()
+        if content.startswith('#'):
+            first_line = content.splitlines()[0].lstrip('#').strip()
+            if first_line:
+                title = first_line
+        summary = ' '.join([line.strip() for line in content.splitlines() if line.strip()][:4])
+        blob = f"{title} {summary} {content}".lower()
+        if query_lower and query_lower not in blob:
+            return
+        if agent and agent_name and agent_name.lower() != agent.lower():
+            return
+        docs.append({
+            'id': str(path),
+            'title': title,
+            'summary': summary[:400],
+            'agent': agent_name or 'Unknown',
+            'source': source,
+            'path': str(path)
+        })
+
+    # Obsidian vault
+    if MEMORY_VAULT.exists():
+        for md in MEMORY_VAULT.rglob('*.md'):
+            agent_name = None
+            if 'agents' in md.parts:
+                agent_name = md.stem.title()
+            elif 'Memory Banks' in md.parts:
+                agent_name = md.stem.replace(' Memory Bank', '')
+            add_doc(md, 'obsidian', agent_name)
+
+    # OpenClaw workspaces
+    for agent_id in WORKSPACE_AGENTS:
+        workspace = OPENCLAW_ROOT / f'workspace-{agent_id}'
+        if not workspace.exists():
+            continue
+        memory_file = workspace / 'MEMORY.md'
+        if memory_file.exists():
+            add_doc(memory_file, 'openclaw', agent_id.title())
+        daily_dir = workspace / 'memory'
+        if daily_dir.exists():
+            for md in daily_dir.glob('*.md'):
+                add_doc(md, 'openclaw', agent_id.title())
+
+    return docs[:limit]
 
 
 @app.middleware("http")
@@ -82,6 +142,13 @@ async def telemetry_snapshot() -> Dict[str, Any]:
 async def command_log_snapshot(limit: int = 100) -> Dict[str, Any]:
     return {"entries": command_log.snapshot(limit), "ts": _now()}
 
+
+
+
+@app.get("/intel/memory")
+async def memory_index(q: str | None = Query(default=None), agent: str | None = Query(default=None), limit: int = Query(default=200, ge=1, le=500)) -> Dict[str, Any]:
+    docs = _read_memory_docs(query=q, agent=agent, limit=limit)
+    return {"entries": docs, "count": len(docs), "ts": _now()}
 
 @app.get("/status")
 async def status_snapshot() -> Dict[str, Any]:

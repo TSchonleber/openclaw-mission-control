@@ -4,6 +4,7 @@ import heroHall from './assets/hero-hall.jpg'
 import CommandLogPanel from './components/CommandLogPanel'
 import OpsFeed from './components/OpsFeed'
 import MemoryStream from './components/MemoryStream'
+import MemoryBoardPage from './components/MemoryBoardPage'
 import CalendarPreview from './components/CalendarPreview'
 import TaskBoardPage from './components/TaskBoardPage'
 import CalendarPage from './components/CalendarPage'
@@ -21,7 +22,7 @@ import {
   getScheduleColorClass
 } from './config/scheduleConstants'
 import { listSchedule, createScheduleItem, deleteScheduleItem, updateScheduleItem } from './api/schedule'
-import { fetchOpsFeed, fetchMemoryStream } from './api/intel'
+import { fetchOpsFeed, fetchMemoryStream, fetchMemoryIndex } from './api/intel'
 import { listTasks, createTask as apiCreateTask, advanceTask as apiAdvanceTask, rewindTask as apiRewindTask, reassignTask as apiReassignTask, completeTask as apiCompleteTask, deleteTask as apiDeleteTask } from './api/tasks'
 import { autoAssignOwner } from './utils/routingRules'
 
@@ -1587,7 +1588,7 @@ const handleEnterHub = () => setHasEntered(true)
   }, [useTasksApi, refreshTasks])
 
   const handleNavigate = useCallback(view => {
-    const allowed = ['dashboard', 'tasks', 'calendar']
+    const allowed = ['dashboard', 'tasks', 'calendar', 'memory']
     setActiveView(allowed.includes(view) ? view : 'dashboard')
   }, [])
 
