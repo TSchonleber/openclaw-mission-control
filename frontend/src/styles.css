@@ -2642,8 +2642,59 @@ button.ghost:hover {
 }
 
 
+
 .pixel-office {
   padding: 28px 32px 48px;
+}
+
+.office-map {
+  position: relative;
+  height: 520px;
+  border-radius: 20px;
+  background: repeating-conic-gradient(from 0deg, rgba(22, 24, 32, 0.9) 0 25%, rgba(12, 14, 20, 0.9) 0 50%) 50% / 64px 64px;
+  overflow: hidden;
+}
+
+.office-prop {
+  position: absolute;
+  image-rendering: pixelated;
+}
+
+.office-seat {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+}
+
+.desk {
+  width: 96px;
+  image-rendering: pixelated;
+}
+
+.chair {
+  width: 32px;
+  image-rendering: pixelated;
+  margin-top: -16px;
+}
+
+.sprite {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.sprite.working {
+  animation: bob 1s ease-in-out infinite;
+}
+
+.sprite-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 4px;
 }
 
 .office-legend {
@@ -2679,157 +2730,7 @@ button.ghost:hover {
   background: #666;
 }
 
-.office-map {
-  background: repeating-linear-gradient(90deg, rgba(18, 22, 30, 0.9) 0 48px, rgba(12, 15, 22, 0.9) 48px 96px);
-  border-radius: 20px;
-  padding: 20px;
-  display: grid;
-  gap: 16px;
-}
-
-.private-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.private-office {
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px;
-  background: rgba(8, 10, 16, 0.75);
-  display: grid;
-  gap: 8px;
-}
-
-.office-door {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.office-desk {
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.office-props {
-  display: flex;
-  gap: 14px;
-  justify-content: center;
-}
-
-.prop {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-}
-
-.prop.watercooler {
-  background: linear-gradient(180deg, rgba(120, 200, 255, 0.6), rgba(50, 90, 120, 0.7));
-}
-
-.prop.plant {
-  background: radial-gradient(circle at 50% 40%, rgba(70, 200, 120, 0.8), rgba(20, 80, 40, 0.7));
-}
-
-.prop.table {
-  background: rgba(140, 120, 90, 0.6);
-}
-
-.main-floor {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.open-desk {
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px;
-  display: grid;
-  gap: 6px;
-  background: rgba(6, 8, 14, 0.65);
-}
-
-.desk {
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.agent-sprite {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.78rem;
-  color: var(--text);
-}
-
-.agent-sprite .sprite {
-  width: 18px;
-  height: 18px;
-  background: #6ee0ff;
-  border-radius: 4px;
-  box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2);
-}
-
-.agent-sprite.working .sprite {
-  animation: bob 1.6s ease-in-out infinite;
-}
-
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
-}
-
-.sprite {
-  width: 24px;
-  height: 24px;
-  image-rendering: pixelated;
-  background-size: 64px 160px;
-  background-position: 0 0;
-}
-
-.sprite.brown-purple {
-  background-image: url('./assets/office/WorkerSheetBrownPurple.png');
-}
-
-.sprite.brown-white {
-  background-image: url('./assets/office/WorkerSheetBrownWhite.png');
-}
-
-.sprite.yellow-purple {
-  background-image: url('./assets/office/WorkerSheetYellowPurple.png');
-}
-
-.sprite.yellow-white {
-  background-image: url('./assets/office/WorkerSheetYellowWhite.png');
-}
-
-.agent-sprite.working .sprite {
-  animation: sprite-walk 0.8s steps(4) infinite;
-}
-
-@keyframes sprite-walk {
-  from { background-position: 0 0; }
-  to { background-position: -64px 0; }
-}
-
-.office-desk::after {
-  content: '';
-  display: block;
-  width: 24px;
-  height: 24px;
-  background-image: url('./assets/office/ComputerSheet.png');
-  background-size: 80px 160px;
-  image-rendering: pixelated;
-}
-
-.prop.watercooler {
-  background-image: url('./assets/office/WatercoolerSheet.png');
-  background-size: 112px 16px;
-  image-rendering: pixelated;
 }

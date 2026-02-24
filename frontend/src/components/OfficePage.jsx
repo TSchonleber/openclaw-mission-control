@@ -1,4 +1,15 @@
 import React from 'react'
+import bossSprite from '../assets/office2/boss.png'
+import worker1 from '../assets/office2/worker1.png'
+import worker2 from '../assets/office2/worker2.png'
+import worker4 from '../assets/office2/worker4.png'
+import deskPc from '../assets/office2/desk-with-pc.png'
+import waterCooler from '../assets/office2/water-cooler.png'
+import plant from '../assets/office2/plant.png'
+import printer from '../assets/office2/printer.png'
+import chair from '../assets/office2/Chair.png'
+import partition1 from '../assets/office2/office-partitions-1.png'
+import partition2 from '../assets/office2/office-partitions-2.png'
 
 const OfficePage = ({ agents, subagents, activity, onBack }) => {
   const withStatus = list => list.map(agent => {
@@ -9,6 +20,21 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
 
   const core = withStatus(agents.filter(a => a.tier === 'core'))
   const subs = withStatus(subagents)
+
+  const coreSlots = [
+    { id: 'aster', x: 80, y: 60, sprite: bossSprite },
+    { id: 'iris', x: 320, y: 60, sprite: worker1 },
+    { id: 'nara', x: 560, y: 60, sprite: worker2 },
+    { id: 'osiris', x: 800, y: 60, sprite: worker4 }
+  ]
+
+  const subSlots = [
+    { x: 140, y: 260, sprite: worker1 },
+    { x: 320, y: 260, sprite: worker2 },
+    { x: 500, y: 260, sprite: worker4 },
+    { x: 680, y: 260, sprite: worker1 },
+    { x: 860, y: 260, sprite: worker2 }
+  ]
 
   return (
     <div className="office-page pixel-office">
@@ -26,36 +52,36 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
       </div>
 
       <div className="office-map">
-        <div className="office-row private-row">
-          {core.map(agent => (
-            <div key={agent.id} className="private-office">
-              <div className="office-door" />
-              <div className="office-desk" />
-              <div className={`agent-sprite ${agent.status}`}>
-                <div className={`sprite ${agent.sprite || ""}`} />
-                <span>{agent.name}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <img className="office-prop partition" src={partition1} alt="partition" style={{ left: 40, top: 20 }} />
+        <img className="office-prop partition" src={partition2} alt="partition" style={{ left: 520, top: 20 }} />
+        <img className="office-prop watercooler" src={waterCooler} alt="watercooler" style={{ left: 920, top: 320 }} />
+        <img className="office-prop plant" src={plant} alt="plant" style={{ left: 60, top: 320 }} />
+        <img className="office-prop printer" src={printer} alt="printer" style={{ left: 480, top: 360 }} />
 
-        <div className="office-props">
-          <div className="prop watercooler" />
-          <div className="prop plant" />
-          <div className="prop table" />
-        </div>
-
-        <div className="office-row main-floor">
-          {subs.map(agent => (
-            <div key={agent.id} className="open-desk">
-              <div className="desk" />
-              <div className={`agent-sprite ${agent.status}`}>
-                <div className={`sprite ${agent.sprite || ""}`} />
-                <span>{agent.name}</span>
-              </div>
+        {coreSlots.map(slot => {
+          const agent = core.find(item => item.id === slot.id)
+          if (!agent) return null
+          return (
+            <div key={slot.id} className="office-seat" style={{ left: slot.x, top: slot.y }}>
+              <img src={deskPc} alt="desk" className="desk" />
+              <img src={chair} alt="chair" className="chair" />
+              <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <span className="sprite-label">{agent.name}</span>
             </div>
-          ))}
-        </div>
+          )
+        })}
+
+        {subs.map((agent, index) => {
+          const slot = subSlots[index % subSlots.length]
+          return (
+            <div key={agent.id} className="office-seat" style={{ left: slot.x, top: slot.y }}>
+              <img src={deskPc} alt="desk" className="desk" />
+              <img src={chair} alt="chair" className="chair" />
+              <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <span className="sprite-label">{agent.name}</span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
