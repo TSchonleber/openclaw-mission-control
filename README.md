@@ -1,36 +1,85 @@
-# Nara Hub (dev)
+# OpenClaw Mission Control
 
-Dev scaffold for the Nara personal chat hub (React/Vite frontend + FastAPI backend).
+A live, agent-driven command center for tasks, calendar, memory, and office presence.
 
-## Quick start
+## What this includes
+- **Mission Control UI** (Tasks, Calendar, Memory, Team, Office)
+- **Gateway API** for routing commands to OpenClaw agents
+- **Ingest pipeline** for Obsidian + agent chat logs
+- **Memory board** with search across vault + OpenClaw workspaces
+- **Pixel office view** with live agent status + motion
 
+## Requirements (free)
+- Node 18+ (frontend)
+- Python 3.11+ (backend)
+- OpenClaw CLI installed + configured
+- Optional: ngrok free account (for public demo URL)
+
+## Local setup
 ```bash
-# backend
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-
 # frontend
 cd frontend
 npm install
 npm run dev
+
+# backend
+cd ../backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+
+# gateway (required for /routes, /ws)
+cd ../gateway
+source ../backend/.venv/bin/activate
+uvicorn app:app --reload --port 8000
 ```
 
-## WebSocket config
+> The frontend expects the **gateway** on port 8000 for `/routes/*`, `/ws`, `/intel/*`, `/mission/*`.
 
-The frontend connects to `ws://<host>:8000/ws` by default. Override with `VITE_WS_URL`.
+## Environment variables
+Copy `.env.example` to `.env` and set values as needed.
 
-## Codex routing
+Frontend:
+- `VITE_API_BASE_URL` – gateway URL (e.g., `http://localhost:8000` or ngrok)
+- `VITE_WS_URL` – websocket URL (e.g., `ws://localhost:8000/ws`)
 
-Backend heuristically routes code-heavy prompts to the Cursor Codex adapter
-(`cursor_adapter.py`). Provide credentials via macOS Keychain (service `CURSOR_API_KEY`).
-Chatty prompts stay on the lightweight `gpt-4.1-mini` path.
+Backend:
+- `MEMORY_VAULT` – Obsidian vault path
+- `OPENCLAW_ROOT` – OpenClaw data root
 
-## Telemetry & Command Log
+## Free public demo (ngrok)
+1. Create a free ngrok account
+2. Add your auth token:
+   ```bash
+   ngrok config add-authtoken <TOKEN>
+   ```
+3. Start tunnel:
+   ```bash
+   ngrok http 8000
+   ```
+4. Use the generated URL:
+   - `VITE_API_BASE_URL=https://<ngrok>.ngrok-free.dev`
+   - `VITE_WS_URL=wss://<ngrok>.ngrok-free.dev/ws`
 
-- `GET /telemetry` returns the latest metrics snapshot; the same payload is also delivered over
-  the WebSocket stream as `{ "type": "telemetry", ... }`.
-- `GET /command-log?limit=100` hydrates the recent command entries; incremental updates arrive
-  as `{ "type": "command_log", "entry": { ... } }` events on the socket.
-- Frontend docs: see `frontend/docs/api.md` for the expected payload shapes.
+## Ingest (Obsidian + chat logs)
+```bash
+cd backend
+source .venv/bin/activate
+python -m scripts.ingest_cli \
+  --obsidian-path "$MEMORY_VAULT" \
+  --chat-glob "$OPENCLAW_ROOT/agents/*/sessions/*.jsonl"
+```
+
+## Dream journal (nightly)
+A nightly script can generate dream journal entries for each agent.
+Set `DREAM_JOURNAL_AGENTS` and run:
+```bash
+cd backend
+source .venv/bin/activate
+python dream_journal.py
+```
+
+---
+
+**Goal:** This repo is designed to be a clean, public demo of a working agent command center.

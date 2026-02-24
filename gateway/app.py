@@ -41,8 +41,8 @@ app.add_middleware(
 command_log = CommandLog(max_entries=150)
 telemetry = TelemetryTracker(window_minutes=30)
 
-MEMORY_VAULT = Path('/Users/r4vager/Documents/Agent Memory')
-OPENCLAW_ROOT = Path('/Users/r4vager/.openclaw')
+MEMORY_VAULT = Path(os.getenv('MEMORY_VAULT', str(Path.home() / 'Documents' / 'Agent Memory')))
+OPENCLAW_ROOT = Path(os.getenv('OPENCLAW_ROOT', str(Path.home() / '.openclaw')))
 WORKSPACE_AGENTS = ['iris', 'aster', 'nara', 'osiris']
 tasks_repo = TaskRepository()
 schedule_repo = ScheduleRepository()

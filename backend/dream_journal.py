@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import subprocess
+import os
 from datetime import datetime
 from pathlib import Path
 
-VAULT = Path('/Users/r4vager/Documents/Agent Memory')
-DREAMS_DIR = VAULT / 'Dreams'
-AGENTS = ['aster', 'nara', 'iris', 'osiris']
+VAULT = Path(os.getenv('MEMORY_VAULT', str(Path.home() / 'Documents' / 'Agent Memory')))
+DREAMS_DIR = Path(os.getenv('DREAMS_DIR', str(VAULT / 'Dreams')))
+
+AGENTS = os.getenv('DREAM_JOURNAL_AGENTS', 'aster,nara,iris,osiris').split(',')
 
 
 def _run_agent(agent: str, prompt: str) -> str:

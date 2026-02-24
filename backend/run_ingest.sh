@@ -8,5 +8,5 @@ if [ ! -d "$VENV_PATH" ]; then
 fi
 source "$VENV_PATH/bin/activate"
 python -m scripts.ingest_cli \
-  --obsidian-path "/Users/r4vager/Documents/Agent Memory" \
-  --chat-glob "/Users/r4vager/.openclaw/agents/*/sessions/*.jsonl"
+  --obsidian-path "${MEMORY_VAULT:-$HOME/Documents/Agent Memory}" \
+  --chat-glob "${OPENCLAW_ROOT:-$HOME/.openclaw}/agents/*/sessions/*.jsonl"
