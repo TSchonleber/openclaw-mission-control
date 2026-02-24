@@ -2758,3 +2758,16 @@ button.ghost:hover {
   75% { transform: translate(-6px, -4px); }
   100% { transform: translate(0, 0); }
 }
+
+.office-seat.demo {
+  animation: roam 4s ease-in-out infinite;
+}
+
+.sprite.demo {
+  animation: bob 1.2s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}

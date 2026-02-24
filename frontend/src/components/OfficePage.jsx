@@ -16,10 +16,11 @@ import partition1 from '../assets/office2/office-partitions-1.png'
 import partition2 from '../assets/office2/office-partitions-2.png'
 
 const OfficePage = ({ agents, subagents, activity, onBack }) => {
+  const [demoMotion, setDemoMotion] = React.useState(true)
   const withStatus = list => list.map(agent => {
     const last = activity[agent.id]
     const active = last && Date.now() - last < 5 * 60 * 1000
-    return { ...agent, status: active ? 'working' : 'idle' }
+    return { ...agent, status: active ? 'working' : 'idle', demo: demoMotion }
   })
 
   const core = withStatus(agents.filter(a => a.tier === 'core'))
@@ -51,6 +52,10 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
       </header>
 
       <div className="office-legend">
+        <label className="toggle">
+          <input type="checkbox" checked={demoMotion} onChange={e => setDemoMotion(e.target.checked)} />
+          <span>Demo motion</span>
+        </label>
         <span className="legend working">Working</span>
         <span className="legend idle">Idle</span>
       </div>
@@ -70,10 +75,10 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
           const agent = core.find(item => item.id === slot.id)
           if (!agent) return null
           return (
-            <div key={slot.id} className={`office-seat ${agent.status}`} style={{ left: slot.x, top: slot.y }}>
+            <div key={slot.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
-              <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
               <span className="sprite-label">{agent.name}</span>
             </div>
           )
@@ -82,10 +87,10 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
         {subs.map((agent, index) => {
           const slot = subSlots[index % subSlots.length]
           return (
-            <div key={agent.id} className={`office-seat ${agent.status}`} style={{ left: slot.x, top: slot.y }}>
+            <div key={agent.id} className={`office-seat ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ left: slot.x, top: slot.y }}>
               <img src={deskPc} alt="desk" className="desk" />
               <img src={chair} alt="chair" className="chair" />
-              <div className={`sprite ${agent.status}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
+              <div className={`sprite ${agent.status} ${agent.demo ? "demo" : ""}`} style={{ backgroundImage: `url(${slot.sprite})` }} />
               <span className="sprite-label">{agent.name}</span>
             </div>
           )
