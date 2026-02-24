@@ -145,6 +145,15 @@ async def command_log_snapshot(limit: int = 100) -> Dict[str, Any]:
 
 
 
+
+
+@app.get("/intel/ops-feed")
+async def ops_feed(limit: int = Query(default=50, ge=1, le=200), status_filter: str | None = Query(default=None, alias="status")) -> Dict[str, Any]:
+    entries = command_log.snapshot(limit)
+    if status_filter:
+        entries = [entry for entry in entries if entry.status == status_filter]
+    return {"entries": [entry.__dict__ for entry in entries], "ts": _now()}
+
 @app.get("/intel/memory")
 async def memory_index(q: str | None = Query(default=None), agent: str | None = Query(default=None), limit: int = Query(default=200, ge=1, le=500)) -> Dict[str, Any]:
     docs = _read_memory_docs(query=q, agent=agent, limit=limit)
