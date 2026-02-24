@@ -2643,16 +2643,48 @@ button.ghost:hover {
 
 
 
+
 .pixel-office {
   padding: 28px 32px 48px;
 }
+
+.office-legend {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.legend {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.legend.working::before,
+.legend.idle::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.legend.working::before { background: #6ee0ff; }
+.legend.idle::before { background: #666; }
 
 .office-map {
   position: relative;
   height: 520px;
   border-radius: 20px;
-  background: repeating-conic-gradient(from 0deg, rgba(22, 24, 32, 0.9) 0 25%, rgba(12, 14, 20, 0.9) 0 50%) 50% / 64px 64px;
   overflow: hidden;
+}
+
+.office-background {
+  background-image: url('./assets/office3/LargePixelOffice.png');
+  background-size: cover;
+  background-position: center;
 }
 
 .office-prop {
@@ -2690,66 +2722,6 @@ button.ghost:hover {
   position: relative;
 }
 
-.sprite.working {
-  animation: bob 1s ease-in-out infinite;
-}
-
-.sprite-label {
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-.office-legend {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.legend {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--muted);
-}
-
-.legend.working::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background: #6ee0ff;
-}
-
-.legend.idle::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background: #666;
-}
-
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-  25% { transform: translate(6px, -4px); }
-  50% { transform: translate(0, -8px); }
-  75% { transform: translate(-6px, -4px); }
-  100% { transform: translate(0, 0); }
-}
-
-  25% { transform: translate(6px, -4px); }
-  50% { transform: translate(0, -8px); }
-  75% { transform: translate(-6px, -4px); }
-  100% { transform: translate(0, 0); }
-}
-
 .sprite.demo {
   animation: bob 1.2s ease-in-out infinite;
 }
@@ -2759,21 +2731,17 @@ button.ghost:hover {
   50% { transform: translateY(-4px); }
 }
 
-  30% { transform: translate(14px, 0); }
-  60% { transform: translate(14px, 12px); }
-  100% { transform: translate(0, 0); }
-}
+/* Path-based walk animations (sprite only) */
+.sprite.walk-aster.working, .sprite.walk-aster.demo { animation: walk-aster 8s ease-in-out infinite; }
+.sprite.walk-iris.working, .sprite.walk-iris.demo { animation: walk-iris 9s ease-in-out infinite; }
+.sprite.walk-nara.working, .sprite.walk-nara.demo { animation: walk-nara 7.5s ease-in-out infinite; }
+.sprite.walk-osiris.working, .sprite.walk-osiris.demo { animation: walk-osiris 8.5s ease-in-out infinite; }
 
-.office-seat.path-aster .sprite.working, .office-seat.path-aster .sprite.demo { animation: walk-aster 8s ease-in-out infinite; }
-.office-seat.path-iris .sprite.working, .office-seat.path-iris .sprite.demo { animation: walk-iris 9s ease-in-out infinite; }
-.office-seat.path-nara .sprite.working, .office-seat.path-nara .sprite.demo { animation: walk-nara 7.5s ease-in-out infinite; }
-.office-seat.path-osiris .sprite.working, .office-seat.path-osiris .sprite.demo { animation: walk-osiris 8.5s ease-in-out infinite; }
-
-.office-seat.path-sub-0 .sprite.working, .office-seat.path-sub-0 .sprite.demo { animation: walk-sub-0 6.5s ease-in-out infinite; }
-.office-seat.path-sub-1 .sprite.working, .office-seat.path-sub-1 .sprite.demo { animation: walk-sub-1 7s ease-in-out infinite; }
-.office-seat.path-sub-2 .sprite.working, .office-seat.path-sub-2 .sprite.demo { animation: walk-sub-2 7.5s ease-in-out infinite; }
-.office-seat.path-sub-3 .sprite.working, .office-seat.path-sub-3 .sprite.demo { animation: walk-sub-3 6.8s ease-in-out infinite; }
-.office-seat.path-sub-4 .sprite.working, .office-seat.path-sub-4 .sprite.demo { animation: walk-sub-4 7.2s ease-in-out infinite; }
+.sprite.path-sub-0.working, .sprite.path-sub-0.demo { animation: walk-sub-0 6.5s ease-in-out infinite; }
+.sprite.path-sub-1.working, .sprite.path-sub-1.demo { animation: walk-sub-1 7s ease-in-out infinite; }
+.sprite.path-sub-2.working, .sprite.path-sub-2.demo { animation: walk-sub-2 7.5s ease-in-out infinite; }
+.sprite.path-sub-3.working, .sprite.path-sub-3.demo { animation: walk-sub-3 6.8s ease-in-out infinite; }
+.sprite.path-sub-4.working, .sprite.path-sub-4.demo { animation: walk-sub-4 7.2s ease-in-out infinite; }
 
 @keyframes walk-aster {
   0% { transform: translate(0, 0); }
