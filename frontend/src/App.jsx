@@ -793,10 +793,10 @@ export default function App() {
   const officeAgents = useMemo(() => {
     const now = Date.now()
     const list = [
-      { id: 'aster', name: 'Aster', title: 'Front Door / Routing', avatar: avatarAster, tier: 'core' },
-      { id: 'iris', name: 'Iris', title: 'Backend / Integrations', avatar: avatarIris, tier: 'core' },
-      { id: 'nara', name: 'Nara', title: 'Frontend / UX', avatar: avatarNara, tier: 'core' },
-      { id: 'osiris', name: 'Osiris', title: 'Systems / Memory', avatar: avatarOsiris, tier: 'core' }
+      { id: 'aster', name: 'Aster', title: 'Front Door / Routing', avatar: avatarAster, tier: 'core', sprite: 'brown-purple' },
+      { id: 'iris', name: 'Iris', title: 'Backend / Integrations', avatar: avatarIris, tier: 'core', sprite: 'brown-white' },
+      { id: 'nara', name: 'Nara', title: 'Frontend / UX', avatar: avatarNara, tier: 'core', sprite: 'yellow-purple' },
+      { id: 'osiris', name: 'Osiris', title: 'Systems / Memory', avatar: avatarOsiris, tier: 'core', sprite: 'yellow-white' }
     ]
     return list.map(agent => {
       const last = agentActivity[agent.id]
@@ -806,11 +806,11 @@ export default function App() {
   }, [agentActivity])
 
   const officeSubAgents = useMemo(() => [
-    { id: 'backend-fixer', name: 'Backend Fixer', tier: 'sub' },
-    { id: 'frontend-builder', name: 'Frontend Builder', tier: 'sub' },
-    { id: 'automation-engineer', name: 'Automation Engineer', tier: 'sub' },
-    { id: 'spec-writer', name: 'Spec Writer', tier: 'sub' },
-    { id: 'ui-stylist', name: 'UI Stylist', tier: 'sub' }
+    { id: 'backend-fixer', name: 'Backend Fixer', tier: 'sub', sprite: 'brown-purple' },
+    { id: 'frontend-builder', name: 'Frontend Builder', tier: 'sub', sprite: 'yellow-purple' },
+    { id: 'automation-engineer', name: 'Automation Engineer', tier: 'sub', sprite: 'brown-white' },
+    { id: 'spec-writer', name: 'Spec Writer', tier: 'sub', sprite: 'yellow-white' },
+    { id: 'ui-stylist', name: 'UI Stylist', tier: 'sub', sprite: 'yellow-purple' }
   ], [])
 
   const boardOwners = useMemo(() => {

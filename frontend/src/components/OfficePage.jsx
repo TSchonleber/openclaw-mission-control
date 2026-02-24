@@ -32,7 +32,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
               <div className="office-door" />
               <div className="office-desk" />
               <div className={`agent-sprite ${agent.status}`}>
-                <div className="sprite" />
+                <div className={`sprite ${agent.sprite || ""}`} />
                 <span>{agent.name}</span>
               </div>
             </div>
@@ -50,7 +50,7 @@ const OfficePage = ({ agents, subagents, activity, onBack }) => {
             <div key={agent.id} className="open-desk">
               <div className="desk" />
               <div className={`agent-sprite ${agent.status}`}>
-                <div className="sprite" />
+                <div className={`sprite ${agent.sprite || ""}`} />
                 <span>{agent.name}</span>
               </div>
             </div>

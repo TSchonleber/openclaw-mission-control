@@ -2784,3 +2784,52 @@ button.ghost:hover {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+
+.sprite {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  background-size: 64px 160px;
+  background-position: 0 0;
+}
+
+.sprite.brown-purple {
+  background-image: url('./assets/office/WorkerSheetBrownPurple.png');
+}
+
+.sprite.brown-white {
+  background-image: url('./assets/office/WorkerSheetBrownWhite.png');
+}
+
+.sprite.yellow-purple {
+  background-image: url('./assets/office/WorkerSheetYellowPurple.png');
+}
+
+.sprite.yellow-white {
+  background-image: url('./assets/office/WorkerSheetYellowWhite.png');
+}
+
+.agent-sprite.working .sprite {
+  animation: sprite-walk 0.8s steps(4) infinite;
+}
+
+@keyframes sprite-walk {
+  from { background-position: 0 0; }
+  to { background-position: -64px 0; }
+}
+
+.office-desk::after {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 24px;
+  background-image: url('./assets/office/ComputerSheet.png');
+  background-size: 80px 160px;
+  image-rendering: pixelated;
+}
+
+.prop.watercooler {
+  background-image: url('./assets/office/WatercoolerSheet.png');
+  background-size: 112px 16px;
+  image-rendering: pixelated;
+}
