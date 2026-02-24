@@ -21,6 +21,14 @@ const TeamStructurePage = ({ onBack }) => {
     tags: ['Code', 'Systems', 'Reliability']
   }
 
+  const subAgents = [
+    { name: 'Backend Fixer', title: 'API triage', focus: 'Patch server issues, migrations, reliability', tags: ['Backend', 'Reliability'] },
+    { name: 'Frontend Builder', title: 'UI assembly', focus: 'Component builds, layout polish, responsiveness', tags: ['UI', 'UX'] },
+    { name: 'Automation Engineer', title: 'Pipelines', focus: 'Cron jobs, ingest automation, release scripts', tags: ['Automation', 'Pipelines'] },
+    { name: 'Spec Writer', title: 'Docs & contracts', focus: 'API docs, runbooks, specs', tags: ['Docs', 'Contracts'] },
+    { name: 'UI Stylist', title: 'Visual polish', focus: 'Typography, spacing, tokens', tags: ['Design', 'Polish'] }
+  ]
+
   return (
     <div className="team-structure-page team-hero">
       <header className="task-board-header">
@@ -78,6 +86,24 @@ const TeamStructurePage = ({ onBack }) => {
                 <span key={tag} className="pill subtle">{tag}</span>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="team-subagents">
+          <h4>Subagents</h4>
+          <div className="team-subagent-grid">
+            {subAgents.map(agent => (
+              <article key={agent.name} className="team-card sub">
+                <strong>{agent.name}</strong>
+                <span>{agent.title}</span>
+                <p>{agent.focus}</p>
+                <div className="team-tags">
+                  {agent.tags.map(tag => (
+                    <span key={tag} className="pill subtle">{tag}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       </div>

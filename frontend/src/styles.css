@@ -2523,3 +2523,26 @@ button.ghost:hover {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
 }
+
+.team-subagents {
+  margin-top: 8px;
+}
+
+.team-subagents h4 {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.team-subagent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.team-card.sub {
+  background: rgba(6, 8, 14, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+}
