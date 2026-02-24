@@ -2682,9 +2682,7 @@ button.ghost:hover {
 }
 
 .office-background {
-  background-image: url('./assets/office3/PixelOffice.png');
-  background-size: cover;
-  background-position: center;
+  background: #0b0f18;
 }
 
 .office-prop {
